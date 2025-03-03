@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -28,11 +29,24 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+// Structure pour une note
+typedef struct {
+    uint32_t frequency;
+    uint32_t duration; // en ms
+} Note;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+// Fréquences des notes (en Hz)
+#define NOTE_C4  261
+#define NOTE_D4  294
+#define NOTE_E4  329
+#define NOTE_F4  349
+#define NOTE_G4  392
+#define NOTE_A4  440
+#define NOTE_B4  494
+#define NOTE_C5  523
 
 /* USER CODE END PD */
 
@@ -44,7 +58,18 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+// Mélodie de victoire
+Note victory_melody[] = {
+    {NOTE_C4, 500},
+    {NOTE_E4, 500},
+    {NOTE_G4, 500},
+    {NOTE_C5, 500},
+    {0, 500}, // Silence
+    {NOTE_C4, 500},
+    {NOTE_E4, 500},
+    {NOTE_G4, 500},
+    {NOTE_C5, 500},
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -55,6 +80,34 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Fonction pour définir la fréquence du buzzer
+void Set_Buzzer_Frequency(uint32_t frequency) {
+    if (frequency == 0) {
+        LL_TIM_CC_DisableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+        return;
+    }
+    LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+    uint32_t timer_clock = 16000000; // Fréquence du timer (16 MHz)
+    uint32_t prescaler = 0;
+    uint32_t arr_value = (timer_clock / frequency) - 1;
+    LL_TIM_SetAutoReload(TIM2, arr_value);
+    LL_TIM_OC_SetCompareCH2(TIM2, arr_value / 2); // Rapport cyclique de 50%
+}
+
+// Fonction pour jouer une note
+void Play_Note(Note note) {
+    Set_Buzzer_Frequency(note.frequency);
+    LL_mDelay(note.duration);
+    Set_Buzzer_Frequency(0); // Arrêter le son
+    LL_mDelay(50); // Pause entre les notes
+}
+
+// Fonction pour jouer la mélodie de victoire
+void Play_Victory_Melody() {
+    for (int i = 0; i < sizeof(victory_melody) / sizeof(Note); i++) {
+        Play_Note(victory_melody[i]);
+    }
+}
 
 /* USER CODE END 0 */
 
@@ -89,8 +142,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  // Configurer l'UART pour la communication série
   LL_USART_EnableIT_RXNE(USART2);
+
+  // Configurer le timer pour le buzzer
+  LL_TIM_EnableCounter(TIM2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,21 +157,8 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	// Si LL_PB5 est à 1 on éteint la led
-	  if (LL_GPIO_IsInputPinSet(GPIOB, LL_GPIO_PIN_5)) {
-		  LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	  } else {
-		  LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	  }
-
-	  // Si PA10 est à 1 on allume la led
-	  if (LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_10)) {
-		  LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	  } else {
-		  LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	  }
-
     /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
