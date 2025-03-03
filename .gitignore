@@ -1,0 +1,53 @@
+# Répertoires de paramètres spécifiques à l'utilisateur
+.settings/
+.metadata/
+
+# Répertoires de sortie de compilation
+Debug/
+debug/
+Release/
+release/
+
+# Fichiers de dépendances
+*.d
+
+# Fichiers objets
+*.o
+*.ko
+*.obj
+*.elf
+
+# Fichiers de l'éditeur de liens
+*.ilk
+*.map
+*.exp
+
+# Bibliothèques
+*.lib
+*.a
+*.la
+*.lo
+
+# Objets partagés
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Exécutables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+*.bin
+
+# Fichiers de débogage
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Fichiers de lancement spécifiques à l'environnement
+*.launch
