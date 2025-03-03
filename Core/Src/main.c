@@ -254,8 +254,6 @@ int main(void)
   LL_TIM_EnableCounter(TIM2);
 
   // Configuration ADC avec API LL
-  MX_ADC1_Init();
-  ADC1_Calibration();
   LL_ADC_Enable(ADC1);
   while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
     /* Attente de l'activation de l'ADC */
