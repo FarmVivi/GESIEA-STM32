@@ -22,6 +22,7 @@
 #include "stm32l0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,7 +42,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+#define UART_BUFFER_SIZE 256
+static char uartBuffer[UART_BUFFER_SIZE];
+static uint16_t uartBufferIndex = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -166,7 +169,58 @@ void EXTI4_15_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
+  if(LL_USART_IsActiveFlag_RXNE(USART2))
+  {
+	// Lire le caractère reçu
+	char receivedChar = LL_USART_ReceiveData8(USART2);
 
+	// Ajouter le caractère au buffer si il y a de la place
+	if(uartBufferIndex < UART_BUFFER_SIZE - 1)
+	{
+	  uartBuffer[uartBufferIndex++] = receivedChar;
+
+	  // Si c'est un caractère de fin de ligne, traiter le message
+	  if(receivedChar == '\n')
+	  {
+		// Ajouter un caractère nul à la fin
+		uartBuffer[uartBufferIndex] = '\0';
+
+		// Trim du message (enlever les espaces et caractères de contrôle en début et fin)
+		char* trimmedStart = uartBuffer;
+		size_t trimmedLength = uartBufferIndex;
+
+		// Trim du début (avancer le pointeur)
+		while(*trimmedStart && (*trimmedStart == ' ' || *trimmedStart == '\r' || *trimmedStart == '\t'))
+		{
+		  trimmedStart++;
+		  trimmedLength--;
+		}
+
+		// Trim de la fin (réduire la longueur)
+		char* trimmedEnd = trimmedStart + trimmedLength - 1;
+		while(trimmedLength > 0 && (*trimmedEnd == ' ' || *trimmedEnd == '\r' || *trimmedEnd == '\n' || *trimmedEnd == '\t'))
+		{
+		  *trimmedEnd = '\0';
+		  trimmedEnd--;
+		  trimmedLength--;
+		}
+
+		// Appeler la fonction de callback avec le message trimé
+		if(trimmedLength > 0)
+		{
+		  UART_Callback(trimmedStart, trimmedLength);
+		}
+
+		// Réinitialiser l'index pour le prochain message
+		uartBufferIndex = 0;
+	  }
+	}
+	else
+	{
+	  // Buffer overflow, réinitialiser
+	  uartBufferIndex = 0;
+	}
+  }
   /* USER CODE END USART2_IRQn 0 */
   /* USER CODE BEGIN USART2_IRQn 1 */
 

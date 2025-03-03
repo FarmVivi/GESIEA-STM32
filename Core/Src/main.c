@@ -21,10 +21,13 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include <stdint.h>
+#include <stddef.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,15 +42,19 @@ typedef struct {
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 // Fréquences des notes (en Hz)
-#define NOTE_C4  261
-#define NOTE_D4  294
-#define NOTE_E4  329
-#define NOTE_F4  349
-#define NOTE_G4  392
-#define NOTE_A4  440
-#define NOTE_B4  494
-#define NOTE_C5  523
-
+#define NOTE_C4  261.63  // Do4
+#define NOTE_CS4 277.18  // Do#4/Ré♭4
+#define NOTE_D4  293.66  // Ré4
+#define NOTE_DS4 311.13  // Ré#4/Mi♭4
+#define NOTE_E4  329.63  // Mi4
+#define NOTE_F4  349.23  // Fa4
+#define NOTE_FS4 369.99  // Fa#4/Sol♭4
+#define NOTE_G4  392.00  // Sol4
+#define NOTE_GS4 415.30  // Sol#4/La♭4
+#define NOTE_A4  440.00  // La4
+#define NOTE_AS4 466.16  // La#4/Si♭4
+#define NOTE_B4  493.88  // Si4
+#define NOTE_C5  523.25  // Do5
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,18 +65,48 @@ typedef struct {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+// Mélodie de démarrage
+Note init_melody[] = {
+    {NOTE_G4, 200}, {NOTE_A4, 200}, {NOTE_B4, 200}, {NOTE_C5, 400}
+};
+size_t init_length = sizeof(init_melody) / sizeof(Note);
+
+// Mélodie de connexion
+Note connection_melody[] = {
+    {NOTE_C4, 100}, {NOTE_E4, 100}, {NOTE_G4, 100}, {NOTE_C5, 100}, {NOTE_G4, 100}, {NOTE_E4, 100}
+};
+size_t connection_length = sizeof(connection_melody) / sizeof(Note);
+
+// Mélodie de déconnexion
+Note disconnection_melody[] = {
+    {NOTE_C5, 100}, {NOTE_G4, 100}, {NOTE_E4, 100}, {NOTE_C4, 200}
+};
+size_t disconnection_length = sizeof(disconnection_melody) / sizeof(Note);
+
+// Mélodie de début de partie
+Note game_start_melody[] = {
+    {NOTE_E4, 150}, {NOTE_F4, 150}, {NOTE_G4, 150},
+    {NOTE_A4, 150}, {NOTE_B4, 150}, {NOTE_C5, 300}
+};
+size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);
+
+// Mélodie de touche
+Note pong_hit_sound[] = {
+    {NOTE_E4, 100}, {NOTE_G4, 100}
+};
+size_t pong_hit_length = sizeof(pong_hit_sound) / sizeof(Note);
+
 // Mélodie de victoire
 Note victory_melody[] = {
-    {NOTE_C4, 500},
-    {NOTE_E4, 500},
-    {NOTE_G4, 500},
-    {NOTE_C5, 500},
-    {0, 500}, // Silence
-    {NOTE_C4, 500},
-    {NOTE_E4, 500},
-    {NOTE_G4, 500},
-    {NOTE_C5, 500},
+    {NOTE_C4, 200}, {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_C5, 400}
 };
+size_t victory_length = sizeof(victory_melody) / sizeof(Note);
+
+// Mélodie de défaite
+Note defeat_melody[] = {
+    {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200}, {NOTE_C4, 400}
+};
+size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,6 +117,26 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// Redirection de printf vers l'UART2
+int __io_putchar(int ch) {
+    // Attendre que le buffer de transmission soit vide
+    while (!LL_USART_IsActiveFlag_TXE(USART2));
+
+    // Envoyer le caractère
+    LL_USART_TransmitData8(USART2, ch);
+
+    return ch;
+}
+
+// Necessaire pour stdio.h
+int _write(int file, char *ptr, int len) {
+    int i;
+    for (i = 0; i < len; i++) {
+        __io_putchar(*ptr++);
+    }
+    return len;
+}
+
 // Fonction pour définir la fréquence du buzzer
 void Set_Buzzer_Frequency(uint32_t frequency) {
     if (frequency == 0) {
@@ -99,13 +156,56 @@ void Play_Note(Note note) {
     Set_Buzzer_Frequency(note.frequency);
     LL_mDelay(note.duration);
     Set_Buzzer_Frequency(0); // Arrêter le son
-    LL_mDelay(50); // Pause entre les notes
+    LL_mDelay(25); // Pause entre les notes
 }
 
-// Fonction pour jouer la mélodie de victoire
-void Play_Victory_Melody() {
-    for (int i = 0; i < sizeof(victory_melody) / sizeof(Note); i++) {
-        Play_Note(victory_melody[i]);
+// Fonction pour jouer une mélodie
+void Play_Melody(Note* melody, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        Play_Note(melody[i]);
+    }
+}
+
+// Fonction de callback pour les ordres reçues par l'UART
+void UART_Callback(char* msg, size_t length) {
+	// En fonction de la commande reçue
+	if (strncmp(msg, "play:connect", 12) == 0) {
+		// Jouer la mélodie de connexion
+		Play_Melody(connection_melody, connection_length);
+	}
+	else if (strncmp(msg, "play:disconnect", 15) == 0) {
+		// Jouer la mélodie de déconnexion
+		Play_Melody(disconnection_melody, disconnection_length);
+	}
+	else if (strncmp(msg, "play:gamestart", 10) == 0) {
+		// Jouer la mélodie de début de partie
+		Play_Melody(game_start_melody, game_start_length);
+	}
+	else if (strncmp(msg, "play:hit", 8) == 0) {
+		// Jouer le son de touche
+		Play_Melody(pong_hit_sound, pong_hit_length);
+	}
+	else if (strncmp(msg, "play:victory", 12) == 0) {
+		// Jouer la mélodie de victoire
+		Play_Melody(victory_melody, victory_length);
+	}
+	else if (strncmp(msg, "play:defeat", 11) == 0) {
+		// Jouer la mélodie de défaite
+		Play_Melody(defeat_melody, defeat_length);
+	}
+    else if (strncmp(msg, "echo:", 5) == 0) {
+        // Renvoyer le message (pour tester)
+        printf("%s\r\n", msg + 5);
+    }
+    else if (strncmp(msg, "beep:", 5) == 0) {
+        // Format simple: "beep:duree"
+        // Exemple: "beep:500" pour un bip de 500ms à 1000Hz
+        uint32_t duration = atoi(msg + 5);
+        if (duration > 0 && duration < 5000) {  // Limiter à 5 secondes
+            Set_Buzzer_Frequency(1000);  // Fréquence fixe de 1000Hz
+            LL_mDelay(duration);
+            Set_Buzzer_Frequency(0);  // Arrêter le son
+        }
     }
 }
 
@@ -149,6 +249,22 @@ int main(void)
 
   // Configurer le timer pour le buzzer
   LL_TIM_EnableCounter(TIM2);
+
+  // Jouer la mélodie de démarrage
+  Play_Melody(init_melody, init_length);
+
+  // Message de démarrage
+  printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
+  printf("Available commands:\r\n");
+  printf("  play:connect    - Play connection melody\r\n");
+  printf("  play:disconnect - Play disconnection melody\r\n");
+  printf("  play:gamestart  - Play game start melody\r\n");
+  printf("  play:hit        - Play hit sound\r\n");
+  printf("  play:victory    - Play victory melody\r\n");
+  printf("  play:defeat     - Play defeat melody\r\n");
+  printf("  beep:duration   - Beep for duration (ms)\r\n");
+  printf("  echo:message    - Echo back message\r\n");
+  printf("-------------------------------------\r\n\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
