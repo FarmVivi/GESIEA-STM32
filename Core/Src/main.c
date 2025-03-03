@@ -99,6 +99,20 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
+	// Si LL_PB5 est à 1 on éteint la led
+	  if (LL_GPIO_IsInputPinSet(GPIOB, LL_GPIO_PIN_5)) {
+		  LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+	  } else {
+		  LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
+	  }
+
+	  // Si PA10 est à 1 on allume la led
+	  if (LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_10)) {
+		  LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
+	  } else {
+		  LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+	  }
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
