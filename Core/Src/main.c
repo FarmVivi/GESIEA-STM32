@@ -106,6 +106,9 @@ Note defeat_melody[] = {
     {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200}, {NOTE_C4, 400}
 };
 size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
+
+uint32_t x_value = 0;
+uint32_t y_value = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -250,6 +253,14 @@ int main(void)
   // Configurer le timer pour le buzzer
   LL_TIM_EnableCounter(TIM2);
 
+  // Configuration ADC avec API LL
+  MX_ADC1_Init();
+  ADC1_Calibration();
+  LL_ADC_Enable(ADC1);
+  while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
+    /* Attente de l'activation de l'ADC */
+  }
+
   // Jouer la mélodie de démarrage
   Play_Melody(init_melody, init_length);
 
@@ -274,6 +285,34 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    /* --- Contrôle de la LED via les entrées numériques --- */
+    if (LL_GPIO_IsInputPinSet(GPIOB, LL_GPIO_PIN_5)) {
+      LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    } else {
+      LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    }
+
+    if (LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_10)) {
+      LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    } else {
+      LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    }
+
+    /* --- Lecture du joystick via l'ADC --- */
+    // Pour STM32L0, la sélection du canal se fait par le registre CHSELR.
+    // Lecture sur le canal 0 (PA0 pour X)
+    ADC1->CHSELR = ADC_CHSELR_CHSEL0;  // Sélectionne uniquement le canal 0
+    LL_ADC_REG_StartConversion(ADC1);
+    while (!LL_ADC_IsActiveFlag_EOC(ADC1));
+    x_value = LL_ADC_REG_ReadConversionData12(ADC1);
+    LL_ADC_ClearFlag_EOC(ADC1);
+
+    // Lecture sur le canal 1 (PA1 pour Y)
+    ADC1->CHSELR = ADC_CHSELR_CHSEL1;  // Sélectionne uniquement le canal 1
+    LL_ADC_REG_StartConversion(ADC1);
+    while (!LL_ADC_IsActiveFlag_EOC(ADC1));
+    y_value = LL_ADC_REG_ReadConversionData12(ADC1);
+    LL_ADC_ClearFlag_EOC(ADC1);
 
   }
   /* USER CODE END 3 */
