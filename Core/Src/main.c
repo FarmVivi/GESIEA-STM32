@@ -612,54 +612,60 @@ void UART_Callback(char* msg, size_t length) {
         }
     }
     else if (strncmp(msg, "game:start", 10) == 0) {
-        // Format: game:start:points:width:height:sp:vb:vp
-        // points = points to end the game, width = grid width, height = grid height, 
-        // sp = paddle size, vb = velocity ball, vp = velocity paddle
-        char* points_pos_str = strchr(msg + 10, ':'); // Skip "game:start:"
-        if (points_pos_str) {
-            char* width_pos_str = strchr(points_pos_str + 1, ':');
-            if (width_pos_str) {
-                char* height_pos_str = strchr(width_pos_str + 1, ':');
-                if (height_pos_str) {
-                    char* sp_pos_str = strchr(height_pos_str + 1, ':');
-                    if (sp_pos_str) {
-                        char* vb_pos_str = strchr(sp_pos_str + 1, ':');
-                        if (vb_pos_str) {
-                            char* vp_pos_str = strchr(vb_pos_str + 1, ':');
+        // Format: game:start:width:height:points:vb:sb:vp:sp
+        // width = grid width, height = grid height, points = points to end the game, 
+        // vb = ball velocity, sb = ball size, sp = paddle size, vp = paddle velocity
+        char* width_pos_str = strchr(msg + 10, ':'); // Skip "game:start:"
+        if (width_pos_str) {
+            char* height_pos_str = strchr(width_pos_str + 1, ':');
+            if (height_pos_str) {
+                char* points_pos_str = strchr(height_pos_str + 1, ':');
+                if (points_pos_str) {
+                    char* vb_pos_str = strchr(points_pos_str + 1, ':');
+                    if (vb_pos_str) {
+                        char* sb_pos_str = strchr(vb_pos_str + 1, ':');
+                        if (sb_pos_str) {
+                            char* vp_pos_str = strchr(sb_pos_str + 1, ':');
                             if (vp_pos_str) {
-                                uint8_t points = atoi(points_pos_str + 1);
-                                uint16_t grid_width = atoi(width_pos_str + 1);
-                                uint16_t grid_height = atoi(height_pos_str + 1);
-                                uint8_t paddle_size = atoi(sp_pos_str + 1);
-                                uint8_t ball_velocity = atoi(vb_pos_str + 1);
-                                uint8_t paddle_velocity = atoi(vp_pos_str + 1);
-                                
-                                // Verify that dimensions are valid
-                                if (grid_width > 50 && grid_height > 50) {
-                                    Init_Game(grid_width, grid_height, ball_velocity, 3, paddle_velocity, paddle_size);
-                                    Start_Game();
-                                    // Note: points and paddle_velocity parameters are parsed but not used yet
-                                    // They would need to be incorporated into the game logic
+                                char* sp_pos_str = strchr(vp_pos_str + 1, ':');
+                                if (sp_pos_str) {
+                                    uint16_t grid_width = atoi(width_pos_str + 1);
+                                    uint16_t grid_height = atoi(height_pos_str + 1);
+                                    uint8_t points = atoi(points_pos_str + 1);
+                                    uint8_t ball_velocity = atoi(vb_pos_str + 1);
+                                    uint8_t ball_size = atoi(sb_pos_str + 1);
+                                    uint8_t paddle_velocity = atoi(vp_pos_str + 1);
+                                    uint8_t paddle_size = atoi(sp_pos_str + 1);
+                                    
+                                    // Verify that dimensions are valid
+                                    if (grid_width > 50 && grid_height > 50) {
+                                        Init_Game(grid_width, grid_height, ball_velocity, ball_size, paddle_velocity, paddle_size);
+                                        Start_Game();
+                                        // Note: points and paddle_velocity parameters are parsed but not used yet
+                                        // They would need to be incorporated into the game logic
+                                    } else {
+                                        printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
+                                    }
                                 } else {
-                                    printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
+                                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
                                 }
                             } else {
-                            printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+                                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
                             }
                         } else {
-                            printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+                            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
                         }
                     } else {
-                    printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
                     }
                 } else {
-                    printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
                 }
             } else {
-            printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
             }
         } else {
-            printf("Invalid command format. Use: game:start:points:width:height:sp:vb:vp\r\n");
+            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
         }
     }
 	else if (strncmp(msg, "game:pause", 10) == 0) {
