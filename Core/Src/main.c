@@ -31,11 +31,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-// Structure pour une note
-typedef struct {
-    uint32_t frequency;
-    uint32_t duration; // en ms
-} Note;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -89,6 +85,18 @@ Note game_start_melody[] = {
 };
 size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);
 
+// Mélodie de mise en pause
+Note pause_melody[] = {
+    {NOTE_C5, 100}, {NOTE_A4, 100}, {NOTE_F4, 100}, {NOTE_D4, 200}
+};
+size_t pause_length = sizeof(pause_melody) / sizeof(Note);
+
+// Mélodie de reprise
+Note resume_melody[] = {
+    {NOTE_D4, 100}, {NOTE_F4, 100}, {NOTE_A4, 100}, {NOTE_C5, 200}
+};
+size_t resume_length = sizeof(resume_melody) / sizeof(Note);
+
 // Mélodie de touche
 Note pong_hit_sound[] = {
     {NOTE_E4, 100}, {NOTE_G4, 100}
@@ -107,8 +115,16 @@ Note defeat_melody[] = {
 };
 size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
 
-uint32_t x_value = 0;
-uint32_t y_value = 0;
+// Jeu
+Game game =	{
+	.ball_x = GAME_GRID_SIZE / 2,
+	.ball_y = GAME_GRID_SIZE / 2,
+	.ball_dx = 1,
+	.ball_dy = 1,
+	.paddle_left = GAME_GRID_SIZE / 2,
+	.paddle_right = GAME_GRID_SIZE / 2,
+	.status = GAME_STATUS_NONE
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -139,61 +155,113 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
+// Fonction permettant de lire la valeur numérique depuis une entrée analogique
+uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
+	// Sélectionner le canal
+	LL_ADC_REG_SetSequencerChRem(ADC1, LL_ADC_CHANNEL_0);
+	// Démarrer la conversion
+	LL_ADC_REG_StartConversion(ADCx);
+	// Attendre la fin de la conversion
+	while (!LL_ADC_IsActiveFlag_EOC(ADCx));
+	// Lire la valeur
+	uint16_t value = LL_ADC_REG_ReadConversionData12(ADCx);
+	// Effacer le flag de fin de conversion
+	LL_ADC_ClearFlag_EOC(ADCx);
+	return value;
+}
+
 // Fonction pour définir la fréquence du buzzer
-void Set_Buzzer_Frequency(uint32_t frequency) {
+void Set_Buzzer_Frequency(TIM_TypeDef *TIMx, uint32_t Channels, uint32_t frequency) {
     if (frequency == 0) {
-        LL_TIM_CC_DisableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+        LL_TIM_CC_DisableChannel(TIMx, Channels);
         return;
     }
-    LL_TIM_CC_EnableChannel(TIM2, LL_TIM_CHANNEL_CH2);
+    LL_TIM_CC_EnableChannel(TIMx, Channels);
     uint32_t timer_clock = 16000000; // Fréquence du timer (16 MHz)
-    uint32_t prescaler = 0;
     uint32_t arr_value = (timer_clock / frequency) - 1;
-    LL_TIM_SetAutoReload(TIM2, arr_value);
-    LL_TIM_OC_SetCompareCH2(TIM2, arr_value / 2); // Rapport cyclique de 50%
+    LL_TIM_SetAutoReload(TIMx, arr_value);
+    //LL_TIM_OC_SetCompareCH2(TIMx, arr_value / 2); // Rapport cyclique de 50%
+    // Lire sur les bons channels en fonction de Channels qui peut être LL_TIM_CHANNEL_CH1 ou LL_TIM_CHANNEL_CH2 ou bien une combinaison de plusieurs (comparer Channels avec les masques (constantes LL_TIM_CHANNEL_CH1 et LL_TIM_CHANNEL_CH2))
+    if (Channels & LL_TIM_CHANNEL_CH1) {
+		LL_TIM_OC_SetCompareCH1(TIMx, arr_value / 2);
+	}
+	if (Channels & LL_TIM_CHANNEL_CH2) {
+		LL_TIM_OC_SetCompareCH2(TIMx, arr_value / 2);
+	}
+	if (Channels & LL_TIM_CHANNEL_CH3) {
+		LL_TIM_OC_SetCompareCH3(TIMx, arr_value / 2);
+	}
+	if (Channels & LL_TIM_CHANNEL_CH4) {
+		LL_TIM_OC_SetCompareCH4(TIMx, arr_value / 2);
+	}
 }
 
 // Fonction pour jouer une note
-void Play_Note(Note note) {
-    Set_Buzzer_Frequency(note.frequency);
+void Play_Note(TIM_TypeDef *TIMx, uint32_t Channels, Note note) {
+    Set_Buzzer_Frequency(TIMx, Channels, note.frequency);
     LL_mDelay(note.duration);
-    Set_Buzzer_Frequency(0); // Arrêter le son
+    Set_Buzzer_Frequency(TIMx, Channels, 0); // Arrêter le son
     LL_mDelay(25); // Pause entre les notes
 }
 
 // Fonction pour jouer une mélodie
-void Play_Melody(Note* melody, size_t length) {
+void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t length) {
     for (size_t i = 0; i < length; i++) {
-        Play_Note(melody[i]);
+        Play_Note(TIMx, Channels, melody[i]);
     }
+}
+
+// Fonction pour envoyer toutes les données du jeu à l'IHH
+void Send_Game_All_Data() {
+	// Format: "game:all:status,grip_size,paddle_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_right"
+	printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+		game.status, GAME_GRID_SIZE, GAME_PADDLE_SIZE,
+		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
+		game.paddle_left, game.paddle_right);
+}
+
+// Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
+void Send_Game_Run_Data() {
+	// Format: "game:run:x,y,dx,dy,left,right,status"
+	printf("game:run:%d,%d,%d,%d,%d,%d,%d\r\n",
+		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
+		game.paddle_left, game.paddle_right, game.status);
 }
 
 // Fonction de callback pour les ordres reçues par l'UART
 void UART_Callback(char* msg, size_t length) {
 	// En fonction de la commande reçue
 	if (strncmp(msg, "play:connect", 12) == 0) {
-		// Jouer la mélodie de connexion
-		Play_Melody(connection_melody, connection_length);
+		// Jouer la mélodie de connexion sur les deux buzzers
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, connection_melody, connection_length);
 	}
 	else if (strncmp(msg, "play:disconnect", 15) == 0) {
 		// Jouer la mélodie de déconnexion
-		Play_Melody(disconnection_melody, disconnection_length);
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, disconnection_melody, disconnection_length);
 	}
 	else if (strncmp(msg, "play:gamestart", 10) == 0) {
 		// Jouer la mélodie de début de partie
-		Play_Melody(game_start_melody, game_start_length);
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
+	}
+	else if (strncmp(msg, "play:pause", 10) == 0) {
+		// Jouer la mélodie de pause
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
+	}
+	else if (strncmp(msg, "play:resume", 11) == 0) {
+		// Jouer la mélodie de reprise
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
 	}
 	else if (strncmp(msg, "play:hit", 8) == 0) {
 		// Jouer le son de touche
-		Play_Melody(pong_hit_sound, pong_hit_length);
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
 	}
 	else if (strncmp(msg, "play:victory", 12) == 0) {
 		// Jouer la mélodie de victoire
-		Play_Melody(victory_melody, victory_length);
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, victory_melody, victory_length);
 	}
 	else if (strncmp(msg, "play:defeat", 11) == 0) {
 		// Jouer la mélodie de défaite
-		Play_Melody(defeat_melody, defeat_length);
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
 	}
     else if (strncmp(msg, "echo:", 5) == 0) {
         // Renvoyer le message (pour tester)
@@ -204,9 +272,9 @@ void UART_Callback(char* msg, size_t length) {
         // Exemple: "beep:500" pour un bip de 500ms à 1000Hz
         uint32_t duration = atoi(msg + 5);
         if (duration > 0 && duration < 5000) {  // Limiter à 5 secondes
-            Set_Buzzer_Frequency(1000);  // Fréquence fixe de 1000Hz
+            Set_Buzzer_Frequency(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, 1000);  // Fréquence fixe de 1000Hz
             LL_mDelay(duration);
-            Set_Buzzer_Frequency(0);  // Arrêter le son
+            Set_Buzzer_Frequency(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, 0);  // Arrêter le son
         }
     }
 }
@@ -253,14 +321,18 @@ int main(void)
   // Configurer le timer pour le buzzer
   LL_TIM_EnableCounter(TIM2);
 
-  // Configuration ADC avec API LL
+  // Configurer l'ADC
   LL_ADC_Enable(ADC1);
   while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
     /* Attente de l'activation de l'ADC */
   }
 
+  // Configuration du SYSTICK pour "tick" le jeu et envoyer des données à l'IHM
+  // Tick à 60Hz (16 MHz / 60 Hz = 266666)
+  //LL_SYSTICK_SetReload(266666);
+
   // Jouer la mélodie de démarrage
-  Play_Melody(init_melody, init_length);
+  Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, init_melody, init_length);
 
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
@@ -268,6 +340,8 @@ int main(void)
   printf("  play:connect    - Play connection melody\r\n");
   printf("  play:disconnect - Play disconnection melody\r\n");
   printf("  play:gamestart  - Play game start melody\r\n");
+  printf("  play:pause      - Play pause melody\r\n");
+  printf("  play:resume     - Play resume melody\r\n");
   printf("  play:hit        - Play hit sound\r\n");
   printf("  play:victory    - Play victory melody\r\n");
   printf("  play:defeat     - Play defeat melody\r\n");
@@ -283,35 +357,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    /* --- Contrôle de la LED via les entrées numériques --- */
-    if (LL_GPIO_IsInputPinSet(GPIOB, LL_GPIO_PIN_5)) {
-      LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
-    } else {
-      LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
-    }
-
-    if (LL_GPIO_IsInputPinSet(GPIOA, LL_GPIO_PIN_10)) {
-      LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
-    } else {
-      LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
-    }
-
-    /* --- Lecture du joystick via l'ADC --- */
-    // Pour STM32L0, la sélection du canal se fait par le registre CHSELR.
-    // Lecture sur le canal 0 (PA0 pour X)
-    ADC1->CHSELR = ADC_CHSELR_CHSEL0;  // Sélectionne uniquement le canal 0
-    LL_ADC_REG_StartConversion(ADC1);
-    while (!LL_ADC_IsActiveFlag_EOC(ADC1));
-    x_value = LL_ADC_REG_ReadConversionData12(ADC1);
-    LL_ADC_ClearFlag_EOC(ADC1);
-
-    // Lecture sur le canal 1 (PA1 pour Y)
-    ADC1->CHSELR = ADC_CHSELR_CHSEL1;  // Sélectionne uniquement le canal 1
-    LL_ADC_REG_StartConversion(ADC1);
-    while (!LL_ADC_IsActiveFlag_EOC(ADC1));
-    y_value = LL_ADC_REG_ReadConversionData12(ADC1);
-    LL_ADC_ClearFlag_EOC(ADC1);
-
   }
   /* USER CODE END 3 */
 }

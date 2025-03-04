@@ -128,7 +128,10 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+	// TODO : Récupérer les inputs des deux manettes
+	// TODO : Mettre à jour le jeu
+	// Envoyer les données à l'IHM
+	Send_Game_Run_Data();
   /* USER CODE END SysTick_IRQn 0 */
 
   /* USER CODE BEGIN SysTick_IRQn 1 */
@@ -155,7 +158,32 @@ void EXTI4_15_IRQHandler(void)
   {
     LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_13);
     /* USER CODE BEGIN LL_EXTI_LINE_13 */
+    // Désactiver l'interruption pour éviter les rebonds
+    LL_EXTI_DisableIT_0_31(LL_EXTI_LINE_13);
 
+    // Activer/Désactiver l'actualisation du jeu ainsi que l'envoi de données à l'IHM
+    if(game.status == GAME_STATUS_NONE) {
+    	// TODO : Initialiser le jeu
+    	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
+		game.status = GAME_STATUS_RUNNING;
+		Send_Game_All_Data();
+		LL_SYSTICK_EnableIT();
+	} else if (game.status == GAME_STATUS_RUNNING) {
+		// Mettre le jeu en pause
+    	LL_SYSTICK_DisableIT();
+    	game.status = GAME_STATUS_PAUSED;
+    	Send_Game_All_Data();
+    	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
+	} else if (game.status == GAME_STATUS_PAUSED) {
+		// Reprendre le jeu
+		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
+		game.status = GAME_STATUS_RUNNING;
+		Send_Game_All_Data();
+		LL_SYSTICK_EnableIT();
+	}
+
+    // Réactiver l'interruption
+    LL_EXTI_EnableIT_0_31(LL_EXTI_LINE_13);
     /* USER CODE END LL_EXTI_LINE_13 */
   }
   /* USER CODE BEGIN EXTI4_15_IRQn 1 */
