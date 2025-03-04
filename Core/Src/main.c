@@ -303,12 +303,64 @@ void Update_Play_Melody() {
 	background_index = (background_index + 1) % background_length;
 }
 
+// Fonction pour initialiser le jeu Pong
+void Init_Game() {
+    // Réinitialiser la position de la balle au centre
+    game.ball_x = GAME_GRID_SIZE / 2;
+    game.ball_y = GAME_GRID_SIZE / 2;
+    
+    // Définir une direction de départ aléatoire ou semi-aléatoire
+    // On utilise le temps écoulé depuis le démarrage comme "seed" pour la pseudo-randomisation
+    uint32_t ticks = LL_SYSTICK_GetCounter();
+    
+    // Alterner entre les directions gauche/droite avec un peu d'aléatoire pour la vitesse
+    if (ticks % 2 == 0) {
+        game.ball_dx = 2;  // Vers la droite
+    } else {
+        game.ball_dx = -2; // Vers la gauche
+    }
+    
+    // Vitesse verticale aléatoire
+    if ((ticks / 100) % 3 == 0) {
+        game.ball_dy = 1;  // Vers le bas, lentement
+    } else if ((ticks / 100) % 3 == 1) {
+        game.ball_dy = 2;  // Vers le bas, rapidement
+    } else {
+        game.ball_dy = -1; // Vers le haut
+    }
+    
+    // Positionner les raquettes au centre
+    game.paddle_left = (GAME_GRID_SIZE - GAME_PADDLE_SIZE) / 2;
+    game.paddle_right = (GAME_GRID_SIZE - GAME_PADDLE_SIZE) / 2;
+    
+    // Statut initial
+    game.status = GAME_STATUS_NONE;
+    
+    // Afficher information d'initialisation
+    printf("Game initialized: Ball at (%d,%d), Direction (%d,%d)\r\n", 
+           game.ball_x, game.ball_y, game.ball_dx, game.ball_dy);
+}
+
 // Fonction pour lancer la partie
 void Start_Game() {
-	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
-	game.status = GAME_STATUS_RUNNING;
-	Send_Game_All_Data();
-	LL_SYSTICK_EnableIT();
+    // Initialiser le jeu
+    Init_Game();
+    
+    // Jouer la mélodie de démarrage
+    Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
+    
+    // Définir le statut à "running"
+    game.status = GAME_STATUS_RUNNING;
+    
+    // Envoyer les données du jeu à l'IHM
+    Send_Game_All_Data();
+    
+    // Activer le timer qui fera les appels réguliers à Update_Game()
+    LL_SYSTICK_EnableIT();
+    
+    // Démarrer la musique de fond
+    background_index = 0;
+    Update_Play_Melody();
 }
 
 // Fonction pour mettre en pause la partie
@@ -411,12 +463,8 @@ void Update_Game() {
         game.status = GAME_STATUS_NONE;
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
-        // Réinitialiser la position de la balle pour une nouvelle partie
-        game.ball_x = GAME_GRID_SIZE / 2;
-        game.ball_y = GAME_GRID_SIZE / 2;
-        // Changer de direction pour la prochaine partie
-        game.ball_dx = (game.ball_dx > 0) ? -1 : 1;
-        game.ball_dy = (game.ball_dy > 0) ? -1 : 1;
+        // Réinitialiser le jeu
+        Reset_Game();
         return; // Sortir pour éviter d'envoyer les données
     }
     
@@ -425,12 +473,8 @@ void Update_Game() {
         game.status = GAME_STATUS_NONE;
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
-        // Réinitialiser la position de la balle pour une nouvelle partie
-        game.ball_x = GAME_GRID_SIZE / 2;
-        game.ball_y = GAME_GRID_SIZE / 2;
-        // Changer de direction pour la prochaine partie
-        game.ball_dx = (game.ball_dx > 0) ? -1 : 1;
-        game.ball_dy = (game.ball_dy > 0) ? -1 : 1;
+        // Réinitialiser le jeu
+        Reset_Game();
         return; // Sortir pour éviter d'envoyer les données
     }
     
@@ -538,6 +582,18 @@ void Blue_Button_Callback() {
 	} else if (game.status == GAME_STATUS_PAUSED) {
 		Resume_Game();
 	}
+}
+
+// Fonction pour réinitialiser le jeu
+void Reset_Game() {
+    // Réinitialiser le jeu
+    Init_Game();
+    
+    // Envoyer les données à l'IHM pour actualiser l'affichage
+    Send_Game_All_Data();
+    
+    // Arrêter la musique de fond
+    Stop_Play_Melody();
 }
 
 /* USER CODE END 0 */
