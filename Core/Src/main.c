@@ -46,6 +46,8 @@ typedef struct {
     uint8_t ball_dy;
     uint8_t paddle_left;
     uint8_t paddle_right;
+    uint8_t paddle_left_size;
+    uint8_t paddle_right_size;
     uint8_t status;
 } Game;
 /* USER CODE END PTD */
@@ -78,9 +80,6 @@ typedef struct {
 
 // Taille de la grille du jeu
 #define GAME_GRID_SIZE 250
-
-// Taille de la raquette
-#define GAME_PADDLE_SIZE 6
 
 // Taille de la balle
 #define GAME_BALL_SIZE 3
@@ -183,6 +182,8 @@ Game game =	{
 	.ball_dy = 1,
 	.paddle_left = GAME_GRID_SIZE / 2,
 	.paddle_right = GAME_GRID_SIZE / 2,
+	.paddle_left_size = 6,
+	.paddle_right_size = 6,
 	.status = GAME_STATUS_NONE
 };
 /* USER CODE END PV */
@@ -287,19 +288,19 @@ void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t leng
 
 // Fonction pour envoyer toutes les données du jeu à l'IHH
 void Send_Game_All_Data() {
-	// Format: "game:all:status,grip_size,paddle_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_right"
-	printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
-		game.status, GAME_GRID_SIZE, GAME_PADDLE_SIZE, GAME_BALL_SIZE,
+	// Format: "game:all:status,grid_size,paddle_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_right"
+	printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+		game.status, GAME_GRID_SIZE, GAME_BALL_SIZE,
 		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-		game.paddle_left, game.paddle_right);
+		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size);
 }
 
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
 	// Format: "game:run:x,y,dx,dy,left,right,status"
-	printf("game:run:%d,%d,%d,%d,%d,%d,%d\r\n",
-		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-		game.paddle_left, game.paddle_right, game.status);
+	printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+		game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
+		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size);
 }
 
 // Fonction pour arrêter la mélodie de fond
@@ -318,7 +319,15 @@ void Update_Play_Melody() {
 }
 
 // Fonction pour initialiser le jeu Pong
-void Init_Game() {
+void Init_Game(uint8_t velocity_boost, uint8_t paddle_size) {
+	// Initialiser la vitesse de la balle
+	game.ball_dx = 1 + velocity_boost;
+	game.ball_dy = 1 + velocity_boost;
+
+	// Initialiser la taille des raquettes
+	game.paddle_left_size = paddle_size;
+	game.paddle_right_size = paddle_size;
+
     // Réinitialiser la position de la balle au centre
     game.ball_x = GAME_GRID_SIZE / 2;
     game.ball_y = GAME_GRID_SIZE / 2;
@@ -326,24 +335,24 @@ void Init_Game() {
     // Utiliser notre fonction random pour déterminer la direction horizontale de la balle
     // On choisit 2 ou -2 de façon aléatoire
     if (get_random_number_range(0, 1) == 0) {
-        game.ball_dx = 2;  // Vers la droite
+        game.ball_dx += 2;  // Vers la droite
     } else {
-        game.ball_dx = -2; // Vers la gauche
+        game.ball_dx += -2; // Vers la gauche
     }
     
     // Pour la vitesse verticale, on choisit aléatoirement parmi 1, 2 ou -1
     uint32_t r = get_random_number_range(0, 2);
     if (r == 0) {
-        game.ball_dy = 1;  // Vers le bas, lentement
+        game.ball_dy += 1;  // Vers le bas, lentement
     } else if (r == 1) {
-        game.ball_dy = 2;  // Vers le bas, rapidement
+        game.ball_dy += 2;  // Vers le bas, rapidement
     } else {
-        game.ball_dy = -1; // Vers le haut
+        game.ball_dy += -1; // Vers le haut
     }
     
     // Positionner les raquettes au centre
-    game.paddle_left = (GAME_GRID_SIZE - GAME_PADDLE_SIZE) / 2;
-    game.paddle_right = (GAME_GRID_SIZE - GAME_PADDLE_SIZE) / 2;
+    game.paddle_left = (GAME_GRID_SIZE - game.paddle_left_size) / 2;
+    game.paddle_right = (GAME_GRID_SIZE - game.paddle_right_size) / 2;
     
     // Statut initial
     game.status = GAME_STATUS_NONE;
@@ -351,9 +360,6 @@ void Init_Game() {
 
 // Fonction pour lancer la partie
 void Start_Game() {
-    // Initialiser le jeu
-    Init_Game();
-    
     // Jouer la mélodie de démarrage
     Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
     
@@ -391,7 +397,7 @@ void Resume_Game() {
 // Fonction pour réinitialiser le jeu
 void Reset_Game() {
     // Réinitialiser le jeu
-    Init_Game();
+    Init_Game(1, 6);
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
@@ -422,10 +428,10 @@ void Update_Game() {
         }
     } else if (joystick_y_p1 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_left + GAME_PADDLE_SIZE + paddle_speed <= GAME_GRID_SIZE) {
+        if (game.paddle_left + game.paddle_left_size + paddle_speed <= GAME_GRID_SIZE) {
             game.paddle_left += paddle_speed;
         } else {
-            game.paddle_left = GAME_GRID_SIZE - GAME_PADDLE_SIZE;
+            game.paddle_left = GAME_GRID_SIZE - game.paddle_left_size;
         }
     }
     
@@ -439,10 +445,10 @@ void Update_Game() {
         }
     } else if (joystick_y_p2 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_right + GAME_PADDLE_SIZE + paddle_speed <= GAME_GRID_SIZE) {
+        if (game.paddle_right + game.paddle_right_size + paddle_speed <= GAME_GRID_SIZE) {
             game.paddle_right += paddle_speed;
         } else {
-            game.paddle_right = GAME_GRID_SIZE - GAME_PADDLE_SIZE;
+            game.paddle_right = GAME_GRID_SIZE - game.paddle_right_size;
         }
     }
     
@@ -462,7 +468,7 @@ void Update_Game() {
     // Collision avec la raquette gauche
     if (game.ball_x <= paddle_margin + GAME_BALL_SIZE && 
         game.ball_y + GAME_BALL_SIZE >= game.paddle_left && 
-        game.ball_y <= game.paddle_left + GAME_PADDLE_SIZE) {
+        game.ball_y <= game.paddle_left + game.paddle_left_size) {
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
         game.ball_x = paddle_margin + GAME_BALL_SIZE; // Repositionner la balle pour éviter les collisions multiples
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
@@ -471,7 +477,7 @@ void Update_Game() {
     // Collision avec la raquette droite
     if (game.ball_x + GAME_BALL_SIZE >= GAME_GRID_SIZE - paddle_margin && 
         game.ball_y + GAME_BALL_SIZE >= game.paddle_right && 
-        game.ball_y <= game.paddle_right + GAME_PADDLE_SIZE) {
+        game.ball_y <= game.paddle_right + game.paddle_right_size) {
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
         game.ball_x = GAME_GRID_SIZE - paddle_margin - GAME_BALL_SIZE; // Repositionner la balle
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
@@ -590,12 +596,39 @@ void UART_Callback(char* msg, size_t length) {
             Set_Buzzer_Frequency(BUZZER_TIM, buzzer_channels, 0);  // Arrêter le son
         }
     }
+    else if (strncmp(msg, "game:start", 10) == 0) {
+      // Lire les arguments (game:start:vb:sp), vb = velocity boost, sp = paddle size, ex. game:start:1:6
+      char* vb_pos_str = strchr(msg, ':');
+      if (vb_pos_str) {
+        char* sp_pos_str = strchr(vb_pos_str + 1, ':');
+        if (sp_pos_str) {
+          uint8_t velocity_boost = atoi(vb_pos_str + 1);
+          uint8_t paddle_size = atoi(sp_pos_str + 1);
+          Init_Game(velocity_boost, paddle_size);
+          Start_Game();
+        } else {
+          printf("Invalid command format. Use: game:start:vb:sp\r\n");
+        }
+      } else {
+        printf("Invalid command format. Use: game:start:vb:sp\r\n");
+      }
+	}
+	else if (strncmp(msg, "game:pause", 10) == 0) {
+		Pause_Game();
+	}
+	else if (strncmp(msg, "game:resume", 11) == 0) {
+		Resume_Game();
+	}
+	else {
+		printf("Unknown command: %s\r\n", msg);
+	}
 }
 
 // Fonction de callback pour le bouton poussoir bleu sur la carte
 void Blue_Button_Callback() {
 	// Si la partie n'est pas en cours, démarrer la partie
 	if (game.status == GAME_STATUS_NONE) {
+		Init_Game(1, 6);
 		Start_Game();
 	} else if (game.status == GAME_STATUS_RUNNING) {
 		Pause_Game();
@@ -659,6 +692,7 @@ int main(void)
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
   printf("Available commands:\r\n");
+  printf("  game:play:vb:sp - Start the game with ball velocity boost and paddle size\r\n");
   printf("  play:connect    - Play connection melody\r\n");
   printf("  play:disconnect - Play disconnection melody\r\n");
   printf("  play:gamestart  - Play game start melody\r\n");
