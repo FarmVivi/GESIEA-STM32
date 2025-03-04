@@ -307,7 +307,7 @@ void Send_Game_All_Data() {
 
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
-    // Format: "game:run:status,x,y,dx,dy,left,leftsize,right,rightsize,ballsize,p1points,p2points,maxpoints"
+    // Format: "game:run:status,x,y,dx,dy,ballsize,left,leftsize,right,rightsize,p1points,p2points"
     printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy, game.ball_size,
         game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size,
