@@ -330,11 +330,112 @@ void Resume_Game() {
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
 void Update_Game() {
-	// TODO : Lire les entrées des joysticks, boutons, etc.
-	// TODO : Mettre à jour les positions de la balle et des raquettes et gérer les collisions
-	// TODO : Gérer les victoires/défaites
-	// Envoyer les données à l'IHM
-	Send_Game_Run_Data();
+    // Lire les entrées des joysticks pour les deux joueurs
+    uint16_t joystick_y_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1);
+    uint16_t joystick_y_p2 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P2);
+    
+    // Convertir les valeurs ADC en mouvements de raquette (ADC renvoie typiquement 0-4095)
+    // Si joystick_y > 2048 + seuil, monter la raquette
+    // Si joystick_y < 2048 - seuil, descendre la raquette
+    const uint16_t threshold = 500; // Zone morte pour éviter des mouvements involontaires
+    const uint8_t paddle_speed = 5; // Vitesse de déplacement des raquettes
+    
+    // Mise à jour de la position de la raquette gauche (P1)
+    if (joystick_y_p1 > 2048 + threshold) {
+        // Monter la raquette (diminuer y)
+        if (game.paddle_left >= paddle_speed) {
+            game.paddle_left -= paddle_speed;
+        } else {
+            game.paddle_left = 0;
+        }
+    } else if (joystick_y_p1 < 2048 - threshold) {
+        // Descendre la raquette (augmenter y)
+        if (game.paddle_left + GAME_PADDLE_SIZE + paddle_speed <= GAME_GRID_SIZE) {
+            game.paddle_left += paddle_speed;
+        } else {
+            game.paddle_left = GAME_GRID_SIZE - GAME_PADDLE_SIZE;
+        }
+    }
+    
+    // Mise à jour de la position de la raquette droite (P2)
+    if (joystick_y_p2 > 2048 + threshold) {
+        // Monter la raquette (diminuer y)
+        if (game.paddle_right >= paddle_speed) {
+            game.paddle_right -= paddle_speed;
+        } else {
+            game.paddle_right = 0;
+        }
+    } else if (joystick_y_p2 < 2048 - threshold) {
+        // Descendre la raquette (augmenter y)
+        if (game.paddle_right + GAME_PADDLE_SIZE + paddle_speed <= GAME_GRID_SIZE) {
+            game.paddle_right += paddle_speed;
+        } else {
+            game.paddle_right = GAME_GRID_SIZE - GAME_PADDLE_SIZE;
+        }
+    }
+    
+    // Mise à jour de la position de la balle
+    game.ball_x += game.ball_dx;
+    game.ball_y += game.ball_dy;
+    
+    // Gestion des collisions avec les bords supérieur et inférieur
+    if (game.ball_y <= 0 || game.ball_y + GAME_BALL_SIZE >= GAME_GRID_SIZE) {
+        game.ball_dy = -game.ball_dy; // Inverser la direction verticale
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+    }
+    
+    // Gestion des collisions avec les raquettes
+    const uint8_t paddle_margin = 10; // Distance entre le bord et la raquette
+    
+    // Collision avec la raquette gauche
+    if (game.ball_x <= paddle_margin + GAME_BALL_SIZE && 
+        game.ball_y + GAME_BALL_SIZE >= game.paddle_left && 
+        game.ball_y <= game.paddle_left + GAME_PADDLE_SIZE) {
+        game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
+        game.ball_x = paddle_margin + GAME_BALL_SIZE; // Repositionner la balle pour éviter les collisions multiples
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
+    }
+    
+    // Collision avec la raquette droite
+    if (game.ball_x + GAME_BALL_SIZE >= GAME_GRID_SIZE - paddle_margin && 
+        game.ball_y + GAME_BALL_SIZE >= game.paddle_right && 
+        game.ball_y <= game.paddle_right + GAME_PADDLE_SIZE) {
+        game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
+        game.ball_x = GAME_GRID_SIZE - paddle_margin - GAME_BALL_SIZE; // Repositionner la balle
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+    }
+    
+    // Gestion des conditions de victoire/défaite
+    if (game.ball_x <= 0) {
+        // Joueur 2 gagne
+        game.status = GAME_STATUS_NONE;
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
+        // Réinitialiser la position de la balle pour une nouvelle partie
+        game.ball_x = GAME_GRID_SIZE / 2;
+        game.ball_y = GAME_GRID_SIZE / 2;
+        // Changer de direction pour la prochaine partie
+        game.ball_dx = (game.ball_dx > 0) ? -1 : 1;
+        game.ball_dy = (game.ball_dy > 0) ? -1 : 1;
+        return; // Sortir pour éviter d'envoyer les données
+    }
+    
+    if (game.ball_x + GAME_BALL_SIZE >= GAME_GRID_SIZE) {
+        // Joueur 1 gagne
+        game.status = GAME_STATUS_NONE;
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
+        // Réinitialiser la position de la balle pour une nouvelle partie
+        game.ball_x = GAME_GRID_SIZE / 2;
+        game.ball_y = GAME_GRID_SIZE / 2;
+        // Changer de direction pour la prochaine partie
+        game.ball_dx = (game.ball_dx > 0) ? -1 : 1;
+        game.ball_dy = (game.ball_dy > 0) ? -1 : 1;
+        return; // Sortir pour éviter d'envoyer les données
+    }
+    
+    // Envoyer les données à l'IHM
+    Send_Game_Run_Data();
 }
 
 // Fonction de callback pour les ordres reçues par l'UART
