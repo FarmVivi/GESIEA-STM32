@@ -98,8 +98,8 @@ typedef struct {
 #define JOYSTICK_ADC ADC1
 #define JOYSTICK_X_CHANNEL_P1 LL_ADC_CHANNEL_0
 #define JOYSTICK_Y_CHANNEL_P1 LL_ADC_CHANNEL_1
-#define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_11
-#define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_12
+#define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_10
+#define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_11
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -242,7 +242,7 @@ uint32_t get_random_number_range(uint32_t min, uint32_t max)
 // Fonction permettant de lire la valeur numérique depuis une entrée analogique
 uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
 	// Sélectionner le canal
-	LL_ADC_REG_SetSequencerChRem(ADC1, LL_ADC_CHANNEL_0);
+	LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
 	// Démarrer la conversion
 	LL_ADC_REG_StartConversion(ADCx);
 	// Attendre la fin de la conversion
