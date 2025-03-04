@@ -735,7 +735,13 @@ int main(void)
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
   printf("Available commands:\r\n");
-  printf("  game:start:vb:sp - Start the game with ball velocity boost and paddle size\r\n");
+  printf("  game:start:points:width:height:sp:vb:vp - Start game with parameters:\r\n");
+  printf("    points: points to end the game\r\n");
+  printf("    width:  grid width\r\n");
+  printf("    height: grid height\r\n");
+  printf("    sp:     paddle size\r\n");
+  printf("    vb:     ball velocity boost\r\n");
+  printf("    vp:     paddle velocity\r\n");
   printf("  game:pause       - Pause the game\r\n");
   printf("  game:resume      - Resume the game\r\n");
   printf("  play:connect     - Play connection melody\r\n");
