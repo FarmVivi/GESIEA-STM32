@@ -366,6 +366,9 @@ void Start_Game() {
     // Définir le statut à "running"
     game.status = GAME_STATUS_RUNNING;
     
+    // Allumer la LED du microcontrôleur
+    LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+
     // Envoyer les données du jeu à l'IHM
     Send_Game_All_Data();
     
@@ -381,8 +384,9 @@ void Start_Game() {
 void Pause_Game() {
 	LL_SYSTICK_DisableIT();
 	game.status = GAME_STATUS_PAUSED;
+	LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
 	Send_Game_All_Data();
-	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, 0);
+	Stop_Play_Melody();
 	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
 }
 
@@ -390,17 +394,24 @@ void Pause_Game() {
 void Resume_Game() {
 	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
 	game.status = GAME_STATUS_RUNNING;
+    LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
 	Send_Game_All_Data();
 	LL_SYSTICK_EnableIT();
 }
 
 // Fonction pour réinitialiser le jeu
 void Reset_Game() {
+	// Arrêter le timer
+	LL_SYSTICK_DisableIT();
+
     // Réinitialiser le jeu
     Init_Game(1, 6);
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
+
+	// Réinitialiser la LED
+    LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
 
     // Arrêter la musique de fond
     Stop_Play_Melody();
