@@ -50,6 +50,7 @@ typedef struct {
     uint16_t paddle_right;
     uint8_t paddle_left_size;
     uint8_t paddle_right_size;
+    uint8_t ball_size;
     uint8_t status;
 } Game;
 /* USER CODE END PTD */
@@ -79,9 +80,6 @@ typedef struct {
 #define GAME_STATUS_NONE 0
 #define GAME_STATUS_RUNNING 1
 #define GAME_STATUS_PAUSED 2
-
-// Taille de la balle
-#define GAME_BALL_SIZE 3
 
 // Définir les buzzers, boutons et joystick de chaque joystick
 #define MUSIC_TIM TIM22
@@ -185,6 +183,7 @@ Game game =	{
 	.paddle_right = 125,
 	.paddle_left_size = 6,
 	.paddle_right_size = 6,
+	.ball_size = 3,
 	.status = GAME_STATUS_NONE
 };
 /* USER CODE END PV */
@@ -291,7 +290,7 @@ void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t leng
 void Send_Game_All_Data() {
     // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_left_size,paddle_right,paddle_right_size"
     printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
-        game.status, game.grid_width, game.grid_height, GAME_BALL_SIZE,
+        game.status, game.grid_width, game.grid_height, game.ball_size,
         game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
         game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size);
 }
@@ -299,9 +298,9 @@ void Send_Game_All_Data() {
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
 	// Format: "game:run:x,y,dx,dy,left,right,status"
-	printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+	printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
 		game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size);
+		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size, game.ball_size);
 }
 
 // Fonction pour arrêter la mélodie de fond
@@ -320,7 +319,7 @@ void Update_Play_Melody() {
 }
 
 // Fonction pour initialiser le jeu Pong
-void Init_Game(uint8_t velocity_boost, uint8_t paddle_size, uint16_t width, uint16_t height) {
+void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t ball_size, uint8_t paddle_size) {
     // Initialiser les dimensions de la grille
     game.grid_width = width;
     game.grid_height = height;
@@ -328,6 +327,9 @@ void Init_Game(uint8_t velocity_boost, uint8_t paddle_size, uint16_t width, uint
     // Initialiser la taille des raquettes
     game.paddle_left_size = paddle_size;
     game.paddle_right_size = paddle_size;
+    
+    // Initialiser la taille de la balle
+    game.ball_size = ball_size;
 
     // Réinitialiser la position de la balle au centre
     game.ball_x = game.grid_width / 2;
@@ -404,8 +406,8 @@ void Reset_Game() {
 	// Arrêter le timer
 	LL_SYSTICK_DisableIT();
 
-    // Réinitialiser le jeu
-    Init_Game(1, 6, game.grid_width, game.grid_height);
+    // Réinitialiser le jeu avec les valeurs actuelles mais avec les paramètres par défaut
+    Init_Game(game.grid_width, game.grid_height, 1, game.ball_size, 6);
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
@@ -468,7 +470,7 @@ void Update_Game() {
     game.ball_y += game.ball_dy;
     
     // Gestion des collisions avec les bords supérieur et inférieur
-    if (game.ball_y <= 0 || game.ball_y + GAME_BALL_SIZE >= game.grid_height) {
+    if (game.ball_y <= 0 || game.ball_y + game.ball_size >= game.grid_height) {
         game.ball_dy = -game.ball_dy; // Inverser la direction verticale
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
     }
@@ -477,20 +479,20 @@ void Update_Game() {
     const uint8_t paddle_margin = 10; // Distance entre le bord et la raquette
     
     // Collision avec la raquette gauche
-    if (game.ball_x <= paddle_margin + GAME_BALL_SIZE && 
-        game.ball_y + GAME_BALL_SIZE >= game.paddle_left && 
+    if (game.ball_x <= paddle_margin + game.ball_size && 
+        game.ball_y + game.ball_size >= game.paddle_left && 
         game.ball_y <= game.paddle_left + game.paddle_left_size) {
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
-        game.ball_x = paddle_margin + GAME_BALL_SIZE; // Repositionner la balle pour éviter les collisions multiples
+        game.ball_x = paddle_margin + game.ball_size; // Repositionner la balle pour éviter les collisions multiples
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
     }
     
     // Collision avec la raquette droite
-    if (game.ball_x + GAME_BALL_SIZE >= game.grid_width - paddle_margin &&
-        game.ball_y + GAME_BALL_SIZE >= game.paddle_right && 
+    if (game.ball_x + game.ball_size >= game.grid_width - paddle_margin &&
+        game.ball_y + game.ball_size >= game.paddle_right && 
         game.ball_y <= game.paddle_right + game.paddle_right_size) {
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
-        game.ball_x = game.grid_width - paddle_margin - GAME_BALL_SIZE; // Repositionner la balle
+        game.ball_x = game.grid_width - paddle_margin - game.ball_size; // Repositionner la balle
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
     }
     
@@ -504,7 +506,7 @@ void Update_Game() {
         return;
     }
     
-    if (game.ball_x + GAME_BALL_SIZE >= game.grid_width) {
+    if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 gagne
         game.status = GAME_STATUS_NONE;
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
