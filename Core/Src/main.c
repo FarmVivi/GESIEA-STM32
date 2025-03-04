@@ -420,21 +420,27 @@ void Resume_Game() {
 }
 
 // Fonction pour réinitialiser le jeu
-void Reset_Game() {
+void Stop_Game() {
     // Arrêter le timer
     LL_SYSTICK_DisableIT();
-    
-    // Réinitialiser le jeu avec les valeurs actuelles
-    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
-    
-    // Envoyer les données à l'IHM pour actualiser l'affichage
-    Send_Game_All_Data();
 
     // Réinitialiser la LED
-    LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
 
     // Arrêter la musique de fond
     Stop_Play_Melody();
+    
+    // Arrêter la partie
+    game.status = GAME_STATUS_NONE;
+
+    // Envoyer les données à l'IHM pour actualiser l'affichage
+    Send_Game_All_Data();
+    
+    // Réinitialiser le jeu avec les valeurs actuelles
+    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
+
+    // Jouer la mélodie de fin de partie
+    Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, disconnection_melody, disconnection_length);
 }
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
@@ -526,8 +532,8 @@ void Update_Game() {
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
             
-            // Reset complet du jeu
-            Reset_Game();
+            // Arrêter le jeu
+            Stop_Game();
             return;
         }
         
@@ -559,8 +565,8 @@ void Update_Game() {
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
             
-            // Reset complet du jeu
-            Reset_Game();
+            // Arrêter le jeu
+            Stop_Game();
             return;
         }
         
@@ -736,7 +742,7 @@ void UART_Callback(char* msg, size_t length) {
 		Resume_Game();
 	}
 	else if (strncmp(msg, "game:stop", 9) == 0) {
-	    Reset_Game();
+	    Stop_Game();
 	}
 	else {
 		printf("Unknown command: %s\r\n", msg);
