@@ -53,6 +53,9 @@ typedef struct {
     uint8_t ball_size;
     uint8_t paddle_speed;
     uint8_t status;
+    uint8_t max_points;
+    uint8_t player1_points;
+    uint8_t player2_points;
 } Game;
 /* USER CODE END PTD */
 
@@ -186,7 +189,10 @@ Game game =	{
 	.paddle_right_size = 6,
 	.ball_size = 3,
 	.paddle_speed = 5,
-	.status = GAME_STATUS_NONE
+	.status = GAME_STATUS_NONE,
+    .max_points = 5,
+    .player1_points = 0,
+    .player2_points = 0
 };
 /* USER CODE END PV */
 
@@ -290,19 +296,21 @@ void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t leng
 
 // Fonction pour envoyer toutes les données du jeu à l'IHH
 void Send_Game_All_Data() {
-    // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_left_size,paddle_right,paddle_right_size"
-    printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+    // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_left_size,paddle_right,paddle_right_size,max_points,player1_points,player2_points"
+    printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.grid_width, game.grid_height, game.ball_size,
         game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-        game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size);
+        game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size,
+        game.max_points, game.player1_points, game.player2_points);
 }
 
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
-	// Format: "game:run:status,x,y,dx,dy,left,leftsize,right,rightsize,ballsize"
-	printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
-		game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size, game.ball_size);
+    // Format: "game:run:status,x,y,dx,dy,left,leftsize,right,rightsize,ballsize,p1points,p2points,maxpoints"
+    printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+        game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
+        game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size, game.ball_size,
+        game.player1_points, game.player2_points, game.max_points);
 }
 
 // Fonction pour arrêter la mélodie de fond
@@ -321,7 +329,7 @@ void Update_Play_Melody() {
 }
 
 // Fonction pour initialiser le jeu Pong
-void Init_Game(uint16_t width, uint16_t height, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
+void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
     // Initialiser les dimensions de la grille
     game.grid_width = width;
     game.grid_height = height;
@@ -335,6 +343,11 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t ball_velocity, uint8_t b
     
     // Initialiser la vitesse des raquettes
     game.paddle_speed = paddle_velocity;
+
+    // Initialiser les points
+    game.max_points = max_points;
+    game.player1_points = 0;
+    game.player2_points = 0;
 
     // Réinitialiser la position de la balle au centre
     game.ball_x = game.grid_width / 2;
@@ -408,16 +421,16 @@ void Resume_Game() {
 
 // Fonction pour réinitialiser le jeu
 void Reset_Game() {
-	// Arrêter le timer
-	LL_SYSTICK_DisableIT();
-
-    // Réinitialiser le jeu avec les valeurs actuelles mais avec les paramètres par défaut
-    Init_Game(game.grid_width, game.grid_height, 1, 3, 5, 6);
-
+    // Arrêter le timer
+    LL_SYSTICK_DisableIT();
+    
+    // Réinitialiser le jeu avec les valeurs actuelles
+    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
+    
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
 
-	// Réinitialiser la LED
+    // Réinitialiser la LED
     LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
 
     // Arrêter la musique de fond
@@ -500,23 +513,71 @@ void Update_Game() {
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
     }
     
-    // Gestion des conditions de victoire/défaite
+    // Gestion des conditions de score
     if (game.ball_x <= 0) {
-        // Joueur 2 gagne
-        game.status = GAME_STATUS_NONE;
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
-        Reset_Game();
-        return;
+        // Joueur 2 marque un point
+        game.player2_points++;
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+        
+        // Vérifier si le joueur 2 a gagné la partie
+        if (game.player2_points >= game.max_points) {
+            // Fin de partie, le joueur 2 a gagné
+            game.status = GAME_STATUS_NONE;
+            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
+            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
+            
+            // Reset complet du jeu
+            Reset_Game();
+            return;
+        }
+        
+        // Repositionner la balle au centre et inverser sa direction
+        game.ball_x = game.grid_width / 2;
+        game.ball_y = game.grid_height / 2;
+        game.ball_dx = 2 + (game.player1_points + game.player2_points) / 3; // Augmenter légèrement la vitesse
+        
+        // Choisir aléatoirement la vitesse verticale
+        uint32_t r = get_random_number_range(0, 2);
+        if (r == 0) {
+            game.ball_dy = 1 + (game.player1_points + game.player2_points) / 5;
+        } else if (r == 1) {
+            game.ball_dy = 2 + (game.player1_points + game.player2_points) / 5;
+        } else {
+            game.ball_dy = -1 - (game.player1_points + game.player2_points) / 5;
+        }
     }
     
     if (game.ball_x + game.ball_size >= game.grid_width) {
-        // Joueur 1 gagne
-        game.status = GAME_STATUS_NONE;
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
-        Reset_Game();
-        return;
+        // Joueur 1 marque un point
+        game.player1_points++;
+        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
+        
+        // Vérifier si le joueur 1 a gagné la partie
+        if (game.player1_points >= game.max_points) {
+            // Fin de partie, le joueur 1 a gagné
+            game.status = GAME_STATUS_NONE;
+            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
+            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
+            
+            // Reset complet du jeu
+            Reset_Game();
+            return;
+        }
+        
+        // Repositionner la balle au centre et inverser sa direction
+        game.ball_x = game.grid_width / 2;
+        game.ball_y = game.grid_height / 2;
+        game.ball_dx = -2 - (game.player1_points + game.player2_points) / 3; // Augmenter légèrement la vitesse
+        
+        // Choisir aléatoirement la vitesse verticale
+        uint32_t r = get_random_number_range(0, 2);
+        if (r == 0) {
+            game.ball_dy = 1 + (game.player1_points + game.player2_points) / 5;
+        } else if (r == 1) {
+            game.ball_dy = 2 + (game.player1_points + game.player2_points) / 5;
+        } else {
+            game.ball_dy = -1 - (game.player1_points + game.player2_points) / 5;
+        }
     }
     
     // Envoyer les données à l'IHM
@@ -631,7 +692,7 @@ void UART_Callback(char* msg, size_t length) {
                                 if (sp_pos_str) {
                                     uint16_t grid_width = atoi(width_pos_str + 1);
                                     uint16_t grid_height = atoi(height_pos_str + 1);
-                                    uint8_t points = atoi(points_pos_str + 1);
+                                    uint8_t max_points = atoi(points_pos_str + 1);
                                     uint8_t ball_velocity = atoi(vb_pos_str + 1);
                                     uint8_t ball_size = atoi(sb_pos_str + 1);
                                     uint8_t paddle_velocity = atoi(vp_pos_str + 1);
@@ -639,7 +700,7 @@ void UART_Callback(char* msg, size_t length) {
                                     
                                     // Verify that dimensions are valid
                                     if (grid_width > 50 && grid_height > 50) {
-                                        Init_Game(grid_width, grid_height, ball_velocity, ball_size, paddle_velocity, paddle_size);
+                                        Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
                                         Start_Game();
                                         // Note: points and paddle_velocity parameters are parsed but not used yet
                                         // They would need to be incorporated into the game logic
@@ -683,7 +744,7 @@ void UART_Callback(char* msg, size_t length) {
 void Blue_Button_Callback() {
 	// Si la partie n'est pas en cours, démarrer la partie
 	if (game.status == GAME_STATUS_NONE) {
-		Init_Game(400, 250, 1, 3, 5, 6);
+		Init_Game(400, 250, 5, 1, 3, 5, 6);
 		Start_Game();
 	} else if (game.status == GAME_STATUS_RUNNING) {
 		Pause_Game();
