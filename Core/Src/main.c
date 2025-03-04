@@ -32,7 +32,22 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+// Structure pour une note
+typedef struct {
+    uint32_t frequency;
+    uint32_t duration; // en ms
+} Note;
 
+// Structure pour le status du jeu
+typedef struct {
+    uint8_t ball_x;
+    uint8_t ball_y;
+    uint8_t ball_dx;
+    uint8_t ball_dy;
+    uint8_t paddle_left;
+    uint8_t paddle_right;
+    uint8_t status;
+} Game;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -51,6 +66,39 @@
 #define NOTE_AS4 466.16  // La#4/Si♭4
 #define NOTE_B4  493.88  // Si4
 #define NOTE_C5  523.25  // Do5
+#define NOTE_CS5 554.37  // Do#5/Ré♭5
+#define NOTE_D5  587.33  // Ré5
+#define NOTE_DS5 622.25  // Ré#5/Mi♭5
+#define NOTE_E5  659.25  // Mi5
+
+// Status du jeu
+#define GAME_STATUS_NONE 0
+#define GAME_STATUS_RUNNING 1
+#define GAME_STATUS_PAUSED 2
+
+// Taille de la grille du jeu
+#define GAME_GRID_SIZE 250
+
+// Taille de la raquette
+#define GAME_PADDLE_SIZE 6
+
+// Taille de la balle
+#define GAME_BALL_SIZE 3
+
+// Définir les buzzers, boutons et joystick de chaque joystick
+#define MUSIC_TIM TIM22
+#define MUSIC_CHANNEL LL_TIM_CHANNEL_CH1
+#define BUZZER_TIM TIM2
+#define BUZZER_CHANNEL_P1 LL_TIM_CHANNEL_CH3
+#define BUZZER_CHANNEL_P2 LL_TIM_CHANNEL_CH2
+#define BUTTON_GPIO GPIOA
+#define BUTTON_PIN_P1 LL_GPIO_PIN_8
+#define BUTTON_PIN_P2 LL_GPIO_PIN_10
+#define JOYSTICK_ADC ADC1
+#define JOYSTICK_X_CHANNEL_P1 LL_ADC_CHANNEL_0
+#define JOYSTICK_Y_CHANNEL_P1 LL_ADC_CHANNEL_1
+#define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_11
+#define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_12
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -115,6 +163,17 @@ Note defeat_melody[] = {
     {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200}, {NOTE_C4, 400}
 };
 size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
+
+// Mélodie de fond pour le jeu (boucle)
+Note background_melody[] = {
+    {NOTE_C4, 200}, {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200},
+    {NOTE_D4, 200}, {NOTE_F4, 200}, {NOTE_A4, 200}, {NOTE_D5, 200}, {NOTE_A4, 200}, {NOTE_F4, 200},
+    {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_B4, 200}, {NOTE_E5, 200}, {NOTE_B4, 200}, {NOTE_G4, 200}
+};
+size_t background_length = sizeof(background_melody) / sizeof(Note);
+
+// Index de la mélodie de fond
+size_t background_index = 0;
 
 // Jeu
 Game game =	{
@@ -229,6 +288,47 @@ void Send_Game_Run_Data() {
 		game.paddle_left, game.paddle_right, game.status);
 }
 
+// Fonction pour mettre à jour la mélodie de fond
+void Update_Play_Melody() {
+	// Récupérer la note
+	Note note = background_melody[background_index];
+	// Jouer la note suivante (sans pause)
+	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, note.frequency);
+	// Incrémenter l'index
+	background_index = (background_index + 1) % background_length;
+}
+
+// Fonction pour lancer la partie
+void Start_Game() {
+	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
+	game.status = GAME_STATUS_RUNNING;
+	Send_Game_All_Data();
+	LL_SYSTICK_EnableIT();
+}
+
+// Fonction pour mettre en pause la partie
+void Pause_Game() {
+	LL_SYSTICK_DisableIT();
+	game.status = GAME_STATUS_PAUSED;
+	Send_Game_All_Data();
+	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
+}
+
+// Fonction pour reprendre la partie
+void Resume_Game() {
+	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
+	game.status = GAME_STATUS_RUNNING;
+	Send_Game_All_Data();
+	LL_SYSTICK_EnableIT();
+}
+
+// Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
+void Update_Game() {
+	// TODO : Mettre à jour le jeu
+	// Envoyer les données à l'IHM
+	Send_Game_Run_Data();
+}
+
 // Fonction de callback pour les ordres reçues par l'UART
 void UART_Callback(char* msg, size_t length) {
 	// En fonction de la commande reçue
@@ -280,6 +380,18 @@ void UART_Callback(char* msg, size_t length) {
     }
 }
 
+// Fonction de callback pour le bouton poussoir bleu sur la carte
+void Blue_Button_Callback() {
+	// Si la partie n'est pas en cours, démarrer la partie
+	if (game.status == GAME_STATUS_NONE) {
+		Start_Game();
+	} else if (game.status == GAME_STATUS_RUNNING) {
+		Pause_Game();
+	} else if (game.status == GAME_STATUS_PAUSED) {
+		Resume_Game();
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -319,18 +431,15 @@ int main(void)
   // Configurer l'UART pour la communication série
   LL_USART_EnableIT_RXNE(USART2);
 
-  // Configurer le timer pour le buzzer
+  // Configurer le timer pour les buzzer
   LL_TIM_EnableCounter(TIM2);
+  LL_TIM_EnableCounter(TIM22);
 
   // Configurer l'ADC
   LL_ADC_Enable(ADC1);
   while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
     /* Attente de l'activation de l'ADC */
   }
-
-  // Configuration du SYSTICK pour "tick" le jeu et envoyer des données à l'IHM
-  // Tick à 60Hz (16 MHz / 60 Hz = 266666)
-  //LL_SYSTICK_SetReload(266666);
 
   // Jouer la mélodie de démarrage
   Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, init_melody, init_length);
