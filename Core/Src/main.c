@@ -84,6 +84,7 @@ typedef struct {
 #define GAME_STATUS_NONE 0
 #define GAME_STATUS_RUNNING 1
 #define GAME_STATUS_PAUSED 2
+#define GAME_STATUS_FINISHED 3
 
 // Définir les buzzers, boutons et joystick de chaque joystick
 #define MUSIC_TIM TIM22
@@ -429,18 +430,15 @@ void Stop_Game() {
 
     // Arrêter la musique de fond
     Stop_Play_Melody();
-    
-    // Arrêter la partie
-    game.status = GAME_STATUS_NONE;
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
-    
-    // Réinitialiser le jeu avec les valeurs actuelles
-    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
 
     // Jouer la mélodie de fin de partie
     Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, disconnection_melody, disconnection_length);
+
+    // Réinitialiser le jeu avec les valeurs actuelles
+    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
 }
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
@@ -528,7 +526,7 @@ void Update_Game() {
         // Vérifier si le joueur 2 a gagné la partie
         if (game.player2_points >= game.max_points) {
             // Fin de partie, le joueur 2 a gagné
-            game.status = GAME_STATUS_NONE;
+            game.status = GAME_STATUS_FINISHED;
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
             
@@ -561,7 +559,7 @@ void Update_Game() {
         // Vérifier si le joueur 1 a gagné la partie
         if (game.player1_points >= game.max_points) {
             // Fin de partie, le joueur 1 a gagné
-            game.status = GAME_STATUS_NONE;
+            game.status = GAME_STATUS_FINISHED;
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
             Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
             
