@@ -261,7 +261,7 @@ void Play_Note(TIM_TypeDef *TIMx, uint32_t Channels, Note note) {
     Set_Buzzer_Frequency(TIMx, Channels, note.frequency);
     LL_mDelay(note.duration);
     Set_Buzzer_Frequency(TIMx, Channels, 0); // Arrêter le son
-    LL_mDelay(25); // Pause entre les notes
+    LL_mDelay(50); // Pause entre les notes
 }
 
 // Fonction pour jouer une mélodie
@@ -286,6 +286,11 @@ void Send_Game_Run_Data() {
 	printf("game:run:%d,%d,%d,%d,%d,%d,%d\r\n",
 		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
 		game.paddle_left, game.paddle_right, game.status);
+}
+
+// Fonction pour arrêter la mélodie de fond
+void Stop_Play_Melody() {
+	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, 0);
 }
 
 // Fonction pour mettre à jour la mélodie de fond
@@ -334,51 +339,90 @@ void Update_Game() {
 
 // Fonction de callback pour les ordres reçues par l'UART
 void UART_Callback(char* msg, size_t length) {
-	// En fonction de la commande reçue
-	if (strncmp(msg, "play:connect", 12) == 0) {
-		// Jouer la mélodie de connexion sur les deux buzzers
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, connection_melody, connection_length);
-	}
-	else if (strncmp(msg, "play:disconnect", 15) == 0) {
-		// Jouer la mélodie de déconnexion
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, disconnection_melody, disconnection_length);
-	}
-	else if (strncmp(msg, "play:gamestart", 10) == 0) {
-		// Jouer la mélodie de début de partie
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
-	}
-	else if (strncmp(msg, "play:pause", 10) == 0) {
-		// Jouer la mélodie de pause
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
-	}
-	else if (strncmp(msg, "play:resume", 11) == 0) {
-		// Jouer la mélodie de reprise
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
-	}
-	else if (strncmp(msg, "play:hit", 8) == 0) {
-		// Jouer le son de touche
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
-	}
-	else if (strncmp(msg, "play:victory", 12) == 0) {
-		// Jouer la mélodie de victoire
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, victory_melody, victory_length);
-	}
-	else if (strncmp(msg, "play:defeat", 11) == 0) {
-		// Jouer la mélodie de défaite
-		Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
-	}
+    uint32_t buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
+    char* colon_pos = strchr(msg, ':');
+
+    // Vérifier s'il y a un troisième argument (sélection du buzzer)
+    if (colon_pos) {
+        char* third_arg = strchr(colon_pos + 1, ':');
+        if (third_arg) {
+            // Convertir le troisième argument en entier
+            int buzzer_select = atoi(third_arg + 1);
+            switch (buzzer_select) {
+                case 1:
+                    buzzer_channels = BUZZER_CHANNEL_P1;
+                    break;
+                case 2:
+                    buzzer_channels = BUZZER_CHANNEL_P2;
+                    break;
+                default:
+                    // Si argument invalide, utiliser les deux buzzers
+                    buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
+                    break;
+            }
+        }
+    }
+
+    // Commandes avec sélection de buzzer possible
+    if (strncmp(msg, "play:connect", 12) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, connection_melody, connection_length);
+    }
+    else if (strncmp(msg, "play:disconnect", 15) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, disconnection_melody, disconnection_length);
+    }
+    else if (strncmp(msg, "play:gamestart", 14) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, game_start_melody, game_start_length);
+    }
+    else if (strncmp(msg, "play:pause", 10) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, pause_melody, pause_length);
+    }
+    else if (strncmp(msg, "play:resume", 11) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, resume_melody, resume_length);
+    }
+    else if (strncmp(msg, "play:hit", 8) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, pong_hit_sound, pong_hit_length);
+    }
+    else if (strncmp(msg, "play:victory", 12) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, victory_melody, victory_length);
+    }
+    else if (strncmp(msg, "play:defeat", 11) == 0) {
+        Play_Melody(BUZZER_TIM, buzzer_channels, defeat_melody, defeat_length);
+    }
     else if (strncmp(msg, "echo:", 5) == 0) {
         // Renvoyer le message (pour tester)
         printf("%s\r\n", msg + 5);
     }
     else if (strncmp(msg, "beep:", 5) == 0) {
-        // Format simple: "beep:duree"
-        // Exemple: "beep:500" pour un bip de 500ms à 1000Hz
-        uint32_t duration = atoi(msg + 5);
+        // Formats:
+        // "beep:duration" - utilise les deux buzzers
+        // "beep:duration:1" - utilise le buzzer 1
+        // "beep:duration:2" - utilise le buzzer 2
+        char* duration_str = msg + 5;
+        uint32_t duration = atoi(duration_str);
+
+        // Vérifier et ajuster duration si un troisième argument existe
+        char* third_arg = strchr(duration_str, ':');
+        if (third_arg) {
+            duration = atoi(duration_str);
+            int buzzer_select = atoi(third_arg + 1);
+
+            switch (buzzer_select) {
+                case 1:
+                    buzzer_channels = BUZZER_CHANNEL_P1;
+                    break;
+                case 2:
+                    buzzer_channels = BUZZER_CHANNEL_P2;
+                    break;
+                default:
+                    buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
+                    break;
+            }
+        }
+
         if (duration > 0 && duration < 5000) {  // Limiter à 5 secondes
-            Set_Buzzer_Frequency(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, 1000);  // Fréquence fixe de 1000Hz
+            Set_Buzzer_Frequency(BUZZER_TIM, buzzer_channels, 1000);  // Fréquence fixe de 1000Hz
             LL_mDelay(duration);
-            Set_Buzzer_Frequency(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, 0);  // Arrêter le son
+            Set_Buzzer_Frequency(BUZZER_TIM, buzzer_channels, 0);  // Arrêter le son
         }
     }
 }
@@ -457,9 +501,11 @@ int main(void)
   printf("  play:pause      - Play pause melody\r\n");
   printf("  play:resume     - Play resume melody\r\n");
   printf("  play:hit        - Play hit sound\r\n");
+  printf("  play:hit:buzz   - Play hit sound using buzzer (1 or 2)\r\n");
   printf("  play:victory    - Play victory melody\r\n");
   printf("  play:defeat     - Play defeat melody\r\n");
-  printf("  beep:duration   - Beep for duration (ms)\r\n");
+  printf("  beep:dura       - Beep for duration (ms)\r\n");
+  printf("  beep:dura:buzz  - Beep for duration (ms) using buzzer (1 or 2)\r\n");
   printf("  echo:message    - Echo back message\r\n");
   printf("-------------------------------------\r\n\r\n");
   /* USER CODE END 2 */

@@ -143,6 +143,10 @@ void SysTick_Handler(void)
   }
 
   musictick++;
+  if(musictick == MUSICTICK_PERIOD - 50)
+  {
+	  Stop_Play_Melody();
+  }
   if(musictick == MUSICTICK_PERIOD)
   {
 	  musictick = 0;

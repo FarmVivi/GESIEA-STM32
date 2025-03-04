@@ -70,6 +70,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+void Stop_Play_Melody();
 void Update_Play_Melody();
 void Update_Game();
 void UART_Callback(char* msg, size_t length);
