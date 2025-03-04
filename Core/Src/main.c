@@ -215,22 +215,15 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
-// Fonction qui génère un nombre pseudo-aléatoire sur 32 bits
+// Fonction qui génère un nombre pseudo-aléatoire
 uint32_t get_random_number()
 {
-    // On utilise une variable statique pour conserver la valeur de seed
-    static uint32_t seed = 0;
-    // Si le seed n'a pas été initialisé, on le prend à partir du tick actuel du SysTick
-    if (seed == 0)
-    {
-        seed = LL_SYSTICK_GetCurrentTick(); // ou une autre source d'initialisation
-    }
-    // Paramètres du LCG : multiplier et incrément (les valeurs proposées ici sont classiques)
-    seed = (1664525 * seed + 1013904223);
-    return seed;
+	static uint32_t seed = 0;
+	seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
+	return seed;
 }
 
-// Fonction qui renvoie un nombre aléatoire compris entre min et max (inclus)
+// Renvoie un nombre aléatoire compris entre min et max (inclus)
 uint32_t get_random_number_range(uint32_t min, uint32_t max)
 {
     return min + (get_random_number() % (max - min + 1));
@@ -354,10 +347,6 @@ void Init_Game() {
     
     // Statut initial
     game.status = GAME_STATUS_NONE;
-    
-    // Afficher information d'initialisation
-    printf("Game initialized: Ball at (%d,%d), Direction (%d,%d)\r\n", 
-           game.ball_x, game.ball_y, game.ball_dx, game.ball_dy);
 }
 
 // Fonction pour lancer la partie
