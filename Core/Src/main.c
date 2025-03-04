@@ -735,6 +735,9 @@ void UART_Callback(char* msg, size_t length) {
 	else if (strncmp(msg, "game:resume", 11) == 0) {
 		Resume_Game();
 	}
+	else if (strncmp(msg, "game:stop", 9) == 0) {
+	    Reset_Game();
+	}
 	else {
 		printf("Unknown command: %s\r\n", msg);
 	}
@@ -818,6 +821,7 @@ int main(void)
   printf("    sp:     paddle size\r\n");
   printf("  game:pause       - Pause the game\r\n");
   printf("  game:resume      - Resume the game\r\n");
+  printf("  game:stop        - Stop the game\r\n");
   printf("  play:connect     - Play connection melody\r\n");
   printf("  play:disconnect  - Play disconnection melody\r\n");
   printf("  play:gamestart   - Play game start melody\r\n");
