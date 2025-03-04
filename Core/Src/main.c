@@ -692,21 +692,21 @@ int main(void)
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
   printf("Available commands:\r\n");
-  printf("  game:play:vb:sp - Start the game with ball velocity boost and paddle size\r\n");
-  printf("  game:pause      - Pause the game\r\n");
-  printf("  game:resume     - Resume the game\r\n");
-  printf("  play:connect    - Play connection melody\r\n");
-  printf("  play:disconnect - Play disconnection melody\r\n");
-  printf("  play:gamestart  - Play game start melody\r\n");
-  printf("  play:pause      - Play pause melody\r\n");
-  printf("  play:resume     - Play resume melody\r\n");
-  printf("  play:hit        - Play hit sound\r\n");
-  printf("  play:hit:buzz   - Play hit sound using buzzer (1 or 2)\r\n");
-  printf("  play:victory    - Play victory melody\r\n");
-  printf("  play:defeat     - Play defeat melody\r\n");
-  printf("  beep:dura       - Beep for duration (ms)\r\n");
-  printf("  beep:dura:buzz  - Beep for duration (ms) using buzzer (1 or 2)\r\n");
-  printf("  echo:message    - Echo back message\r\n");
+  printf("  game:start:vb:sp - Start the game with ball velocity boost and paddle size\r\n");
+  printf("  game:pause       - Pause the game\r\n");
+  printf("  game:resume      - Resume the game\r\n");
+  printf("  play:connect     - Play connection melody\r\n");
+  printf("  play:disconnect  - Play disconnection melody\r\n");
+  printf("  play:gamestart   - Play game start melody\r\n");
+  printf("  play:pause       - Play pause melody\r\n");
+  printf("  play:resume      - Play resume melody\r\n");
+  printf("  play:hit         - Play hit sound\r\n");
+  printf("  play:hit:buzz    - Play hit sound using buzzer (1 or 2)\r\n");
+  printf("  play:victory     - Play victory melody\r\n");
+  printf("  play:defeat      - Play defeat melody\r\n");
+  printf("  beep:dura        - Beep for duration (ms)\r\n");
+  printf("  beep:dura:buzz   - Beep for duration (ms) using buzzer (1 or 2)\r\n");
+  printf("  echo:message     - Echo back message\r\n");
   printf("-------------------------------------\r\n\r\n");
   /* USER CODE END 2 */
 
