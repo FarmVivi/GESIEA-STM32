@@ -321,7 +321,7 @@ void Update_Play_Melody() {
 }
 
 // Fonction pour initialiser le jeu Pong
-void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t ball_size, uint8_t paddle_size, uint8_t paddle_velocity) {
+void Init_Game(uint16_t width, uint16_t height, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
     // Initialiser les dimensions de la grille
     game.grid_width = width;
     game.grid_height = height;
@@ -342,19 +342,19 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t 
     
     // Déterminer aléatoirement la direction horizontale de la balle
     if (get_random_number_range(0, 1) == 0) {
-        game.ball_dx = 2 + velocity_boost;  // Vers la droite
+        game.ball_dx = 2 + ball_velocity;  // Vers la droite
     } else {
-        game.ball_dx = -2 - velocity_boost; // Vers la gauche
+        game.ball_dx = -2 - ball_velocity; // Vers la gauche
     }
     
     // Choisir aléatoirement la vitesse verticale
     uint32_t r = get_random_number_range(0, 2);
     if (r == 0) {
-        game.ball_dy = 1 + velocity_boost;  // Vers le bas, lentement
+        game.ball_dy = 1 + ball_velocity;  // Vers le bas, lentement
     } else if (r == 1) {
-        game.ball_dy = 2 + velocity_boost;  // Vers le bas, rapidement
+        game.ball_dy = 2 + ball_velocity;  // Vers le bas, rapidement
     } else {
-        game.ball_dy = -1 - velocity_boost; // Vers le haut
+        game.ball_dy = -1 - ball_velocity; // Vers le haut
     }
     
     // Positionner les raquettes au centre
@@ -412,7 +412,7 @@ void Reset_Game() {
 	LL_SYSTICK_DisableIT();
 
     // Réinitialiser le jeu avec les valeurs actuelles mais avec les paramètres par défaut
-    Init_Game(game.grid_width, game.grid_height, 1, game.ball_size, 6, game.paddle_speed);
+    Init_Game(game.grid_width, game.grid_height, 1, 3, 5, 6);
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
@@ -631,12 +631,12 @@ void UART_Callback(char* msg, size_t length) {
                                 uint16_t grid_width = atoi(width_pos_str + 1);
                                 uint16_t grid_height = atoi(height_pos_str + 1);
                                 uint8_t paddle_size = atoi(sp_pos_str + 1);
-                                uint8_t velocity_boost = atoi(vb_pos_str + 1);
+                                uint8_t ball_velocity = atoi(vb_pos_str + 1);
                                 uint8_t paddle_velocity = atoi(vp_pos_str + 1);
                                 
                                 // Verify that dimensions are valid
                                 if (grid_width > 50 && grid_height > 50) {
-                                    Init_Game(velocity_boost, paddle_size, grid_width, grid_height);
+                                    Init_Game(grid_width, grid_height, ball_velocity, 3, paddle_velocity, paddle_size);
                                     Start_Game();
                                     // Note: points and paddle_velocity parameters are parsed but not used yet
                                     // They would need to be incorporated into the game logic
@@ -677,7 +677,7 @@ void UART_Callback(char* msg, size_t length) {
 void Blue_Button_Callback() {
 	// Si la partie n'est pas en cours, démarrer la partie
 	if (game.status == GAME_STATUS_NONE) {
-		Init_Game(1, 6, game.grid_width, game.grid_height);
+		Init_Game(400, 250, 1, 3, 5, 6);
 		Start_Game();
 	} else if (game.status == GAME_STATUS_RUNNING) {
 		Pause_Game();
