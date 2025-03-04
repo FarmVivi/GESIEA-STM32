@@ -311,6 +311,7 @@ void Pause_Game() {
 	LL_SYSTICK_DisableIT();
 	game.status = GAME_STATUS_PAUSED;
 	Send_Game_All_Data();
+	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, 0);
 	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
 }
 
@@ -427,6 +428,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_ADC_Init();
+  MX_TIM22_Init();
   /* USER CODE BEGIN 2 */
   // Configurer l'UART pour la communication série
   LL_USART_EnableIT_RXNE(USART2);
