@@ -51,6 +51,7 @@ typedef struct {
     uint8_t paddle_left_size;
     uint8_t paddle_right_size;
     uint8_t ball_size;
+    uint8_t paddle_speed;
     uint8_t status;
 } Game;
 /* USER CODE END PTD */
@@ -184,6 +185,7 @@ Game game =	{
 	.paddle_left_size = 6,
 	.paddle_right_size = 6,
 	.ball_size = 3,
+	.paddle_speed = 5,
 	.status = GAME_STATUS_NONE
 };
 /* USER CODE END PV */
@@ -297,7 +299,7 @@ void Send_Game_All_Data() {
 
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
-	// Format: "game:run:x,y,dx,dy,left,right,status"
+	// Format: "game:run:status,x,y,dx,dy,left,leftsize,right,rightsize,ballsize"
 	printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
 		game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
 		game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size, game.ball_size);
@@ -319,7 +321,7 @@ void Update_Play_Melody() {
 }
 
 // Fonction pour initialiser le jeu Pong
-void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t ball_size, uint8_t paddle_size) {
+void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t ball_size, uint8_t paddle_size, uint8_t paddle_velocity) {
     // Initialiser les dimensions de la grille
     game.grid_width = width;
     game.grid_height = height;
@@ -330,6 +332,9 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t velocity_boost, uint8_t 
     
     // Initialiser la taille de la balle
     game.ball_size = ball_size;
+    
+    // Initialiser la vitesse des raquettes
+    game.paddle_speed = paddle_velocity;
 
     // Réinitialiser la position de la balle au centre
     game.ball_x = game.grid_width / 2;
@@ -407,7 +412,7 @@ void Reset_Game() {
 	LL_SYSTICK_DisableIT();
 
     // Réinitialiser le jeu avec les valeurs actuelles mais avec les paramètres par défaut
-    Init_Game(game.grid_width, game.grid_height, 1, game.ball_size, 6);
+    Init_Game(game.grid_width, game.grid_height, 1, game.ball_size, 6, game.paddle_speed);
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
@@ -429,20 +434,19 @@ void Update_Game() {
     // Si joystick_y > 2048 + seuil, monter la raquette
     // Si joystick_y < 2048 - seuil, descendre la raquette
     const uint16_t threshold = 500; // Zone morte pour éviter des mouvements involontaires
-    const uint8_t paddle_speed = 5; // Vitesse de déplacement des raquettes
     
     // Mise à jour de la position de la raquette gauche (P1)
     if (joystick_y_p1 > 2048 + threshold) {
         // Monter la raquette (diminuer y)
-        if (game.paddle_left >= paddle_speed) {
-            game.paddle_left -= paddle_speed;
+        if (game.paddle_left >= game.paddle_speed) {
+            game.paddle_left -= game.paddle_speed;
         } else {
             game.paddle_left = 0;
         }
     } else if (joystick_y_p1 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_left + game.paddle_left_size + paddle_speed <= game.grid_height) {
-            game.paddle_left += paddle_speed;
+        if (game.paddle_left + game.paddle_left_size + game.paddle_speed <= game.grid_height) {
+            game.paddle_left += game.paddle_speed;
         } else {
             game.paddle_left = game.grid_height - game.paddle_left_size;
         }
@@ -451,15 +455,15 @@ void Update_Game() {
     // Mise à jour de la position de la raquette droite (P2)
     if (joystick_y_p2 > 2048 + threshold) {
         // Monter la raquette (diminuer y)
-        if (game.paddle_right >= paddle_speed) {
-            game.paddle_right -= paddle_speed;
+        if (game.paddle_right >= game.paddle_speed) {
+            game.paddle_right -= game.paddle_speed;
         } else {
             game.paddle_right = 0;
         }
     } else if (joystick_y_p2 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_right + game.paddle_right_size + paddle_speed <= game.grid_height) {
-            game.paddle_right += paddle_speed;
+        if (game.paddle_right + game.paddle_right_size + game.paddle_speed <= game.grid_height) {
+            game.paddle_right += game.paddle_speed;
         } else {
             game.paddle_right = game.grid_height - game.paddle_right_size;
         }
