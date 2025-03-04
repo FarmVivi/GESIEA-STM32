@@ -46,16 +46,21 @@ typedef struct {
     uint16_t ball_y;
     int8_t ball_dx;
     int8_t ball_dy;
-    uint16_t paddle_left;
-    uint16_t paddle_right;
+    uint16_t paddle_left_x;
+    uint16_t paddle_left_y;
+    uint16_t paddle_right_x;
+    uint16_t paddle_right_y;
     uint8_t paddle_left_size;
     uint8_t paddle_right_size;
+    uint8_t paddle_width;
     uint8_t ball_size;
     uint8_t paddle_speed;
     uint8_t status;
     uint8_t max_points;
     uint8_t player1_points;
     uint8_t player2_points;
+    uint16_t left_zone_width;
+    uint16_t right_zone_width;
 } Game;
 /* USER CODE END PTD */
 
@@ -184,16 +189,21 @@ Game game =	{
 	.ball_y = 125,
 	.ball_dx = 1,
 	.ball_dy = 1,
-	.paddle_left = 125,
-	.paddle_right = 125,
+    .paddle_left_x = 20,
+    .paddle_left_y = 125,
+    .paddle_right_x = 380,
+    .paddle_right_y = 125,
 	.paddle_left_size = 6,
 	.paddle_right_size = 6,
+    .paddle_width = 8,
 	.ball_size = 3,
 	.paddle_speed = 5,
 	.status = GAME_STATUS_NONE,
     .max_points = 5,
     .player1_points = 0,
-    .player2_points = 0
+    .player2_points = 0,
+    .left_zone_width = 100,
+    .right_zone_width = 100
 };
 /* USER CODE END PV */
 
@@ -295,22 +305,30 @@ void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t leng
     }
 }
 
-// Fonction pour envoyer toutes les données du jeu à l'IHH
+// Fonction pour envoyer toutes les données du jeu à l'IHM
 void Send_Game_All_Data() {
-    // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_left_size,paddle_right,paddle_right_size,max_points,player1_points,player2_points"
-    printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+    // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,
+    //         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
+    //         paddle_right_x,paddle_right_y,paddle_right_size,max_points,player1_points,player2_points,
+    //         left_zone_width,right_zone_width"
+    printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.grid_width, game.grid_height, game.ball_size,
         game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
-        game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size,
-        game.max_points, game.player1_points, game.player2_points);
+        game.paddle_left_x, game.paddle_left_y, game.paddle_left_size, game.paddle_width,
+        game.paddle_right_x, game.paddle_right_y, game.paddle_right_size,
+        game.max_points, game.player1_points, game.player2_points,
+        game.left_zone_width, game.right_zone_width);
 }
 
 // Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
 void Send_Game_Run_Data() {
-    // Format: "game:run:status,x,y,dx,dy,ballsize,left,leftsize,right,rightsize,p1points,p2points"
-    printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+    // Format: "game:run:status,ball_x,ball_y,ball_dx,ball_dy,ball_size,
+    //         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
+    //         paddle_right_x,paddle_right_y,paddle_right_size,p1points,p2points"
+    printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy, game.ball_size,
-        game.paddle_left, game.paddle_left_size, game.paddle_right, game.paddle_right_size,
+        game.paddle_left_x, game.paddle_left_y, game.paddle_left_size, game.paddle_width,
+        game.paddle_right_x, game.paddle_right_y, game.paddle_right_size,
         game.player1_points, game.player2_points);
 }
 
@@ -338,6 +356,7 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball
     // Initialiser la taille des raquettes
     game.paddle_left_size = paddle_size;
     game.paddle_right_size = paddle_size;
+    game.paddle_width = 8;  // Largeur fixe des raquettes
     
     // Initialiser la taille de la balle
     game.ball_size = ball_size;
@@ -349,6 +368,10 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball
     game.max_points = max_points;
     game.player1_points = 0;
     game.player2_points = 0;
+
+    // Initialiser les zones de jeu des joueurs
+    game.left_zone_width = width / 4;   // 25% du terrain à gauche
+    game.right_zone_width = width / 4;  // 25% du terrain à droite
 
     // Réinitialiser la position de la balle au centre
     game.ball_x = game.grid_width / 2;
@@ -371,9 +394,12 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball
         game.ball_dy = -1 - ball_velocity; // Vers le haut
     }
     
-    // Positionner les raquettes au centre
-    game.paddle_left = (game.grid_height - game.paddle_left_size) / 2;
-    game.paddle_right = (game.grid_height - game.paddle_right_size) / 2;
+    // Positionner les raquettes
+    game.paddle_left_x = 20;  // Position X initiale de la raquette gauche
+    game.paddle_left_y = (game.grid_height - game.paddle_left_size) / 2;  // Centrer verticalement
+    
+    game.paddle_right_x = game.grid_width - 20 - game.paddle_width;  // Position X initiale de la raquette droite
+    game.paddle_right_y = (game.grid_height - game.paddle_right_size) / 2;  // Centrer verticalement
     
     // Statut initial
     game.status = GAME_STATUS_NONE;
@@ -444,45 +470,83 @@ void Stop_Game() {
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
 void Update_Game() {
     // Lire les entrées des joysticks pour les deux joueurs
-    uint16_t joystick_y_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1);
-    uint16_t joystick_y_p2 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P2);
+	uint16_t joystick_y_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1);
+	uint16_t joystick_y_p2 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P2);
+	uint16_t joystick_x_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_X_CHANNEL_P1);
+	uint16_t joystick_x_p2 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_X_CHANNEL_P2);
     
     // Convertir les valeurs ADC en mouvements de raquette (ADC renvoie typiquement 0-4095)
     // Si joystick_y > 2048 + seuil, monter la raquette
     // Si joystick_y < 2048 - seuil, descendre la raquette
     const uint16_t threshold = 500; // Zone morte pour éviter des mouvements involontaires
     
-    // Mise à jour de la position de la raquette gauche (P1)
+    // Mise à jour de la position Y de la raquette gauche (P1)
     if (joystick_y_p1 > 2048 + threshold) {
         // Monter la raquette (diminuer y)
-        if (game.paddle_left >= game.paddle_speed) {
-            game.paddle_left -= game.paddle_speed;
+        if (game.paddle_left_y >= game.paddle_speed) {
+            game.paddle_left_y -= game.paddle_speed;
         } else {
-            game.paddle_left = 0;
+            game.paddle_left_y = 0;
         }
     } else if (joystick_y_p1 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_left + game.paddle_left_size + game.paddle_speed <= game.grid_height) {
-            game.paddle_left += game.paddle_speed;
+        if (game.paddle_left_y + game.paddle_left_size + game.paddle_speed <= game.grid_height) {
+            game.paddle_left_y += game.paddle_speed;
         } else {
-            game.paddle_left = game.grid_height - game.paddle_left_size;
+            game.paddle_left_y = game.grid_height - game.paddle_left_size;
         }
     }
     
-    // Mise à jour de la position de la raquette droite (P2)
+    // Mise à jour de la position X de la raquette gauche (P1)
+    if (joystick_x_p1 > 2048 + threshold) {
+        // Déplacer la raquette vers la droite
+        uint16_t max_x = game.left_zone_width - game.paddle_width;
+        if (game.paddle_left_x + game.paddle_speed <= max_x) {
+            game.paddle_left_x += game.paddle_speed;
+        } else {
+            game.paddle_left_x = max_x;
+        }
+    } else if (joystick_x_p1 < 2048 - threshold) {
+        // Déplacer la raquette vers la gauche
+        if (game.paddle_left_x >= game.paddle_speed) {
+            game.paddle_left_x -= game.paddle_speed;
+        } else {
+            game.paddle_left_x = 0;
+        }
+    }
+    
+    // Mise à jour de la position Y de la raquette droite (P2)
     if (joystick_y_p2 > 2048 + threshold) {
         // Monter la raquette (diminuer y)
-        if (game.paddle_right >= game.paddle_speed) {
-            game.paddle_right -= game.paddle_speed;
+        if (game.paddle_right_y >= game.paddle_speed) {
+            game.paddle_right_y -= game.paddle_speed;
         } else {
-            game.paddle_right = 0;
+            game.paddle_right_y = 0;
         }
     } else if (joystick_y_p2 < 2048 - threshold) {
         // Descendre la raquette (augmenter y)
-        if (game.paddle_right + game.paddle_right_size + game.paddle_speed <= game.grid_height) {
-            game.paddle_right += game.paddle_speed;
+        if (game.paddle_right_y + game.paddle_right_size + game.paddle_speed <= game.grid_height) {
+            game.paddle_right_y += game.paddle_speed;
         } else {
-            game.paddle_right = game.grid_height - game.paddle_right_size;
+            game.paddle_right_y = game.grid_height - game.paddle_right_size;
+        }
+    }
+    
+    // Mise à jour de la position X de la raquette droite (P2)
+    if (joystick_x_p2 > 2048 + threshold) {
+        // Déplacer la raquette vers la droite
+        if (game.paddle_right_x + game.paddle_speed <= game.grid_width - 1) {
+            game.paddle_right_x += game.paddle_speed;
+        } else {
+            game.paddle_right_x = game.grid_width - 1;
+        }
+    } else if (joystick_x_p2 < 2048 - threshold) {
+        // Déplacer la raquette vers la gauche
+        uint16_t min_x = game.grid_width - game.right_zone_width;
+        if (game.paddle_right_x >= min_x + game.paddle_speed) {
+            game.paddle_right_x -= game.paddle_speed;
+        } else {
+            game.paddle_right_x = min_x;
         }
     }
     
@@ -497,23 +561,36 @@ void Update_Game() {
     }
     
     // Gestion des collisions avec les raquettes
-    const uint8_t paddle_margin = 10; // Distance entre le bord et la raquette
     
     // Collision avec la raquette gauche
-    if (game.ball_x <= paddle_margin + game.ball_size && 
-        game.ball_y + game.ball_size >= game.paddle_left && 
-        game.ball_y <= game.paddle_left + game.paddle_left_size) {
+    if (game.ball_dx < 0 // La balle se dirige vers la gauche
+        && game.ball_x <= game.paddle_left_x + game.paddle_width
+        && game.ball_x >= game.paddle_left_x
+        && game.ball_y + game.ball_size >= game.paddle_left_y
+        && game.ball_y <= game.paddle_left_y + game.paddle_left_size) {
+        
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
-        game.ball_x = paddle_margin + game.ball_size; // Repositionner la balle pour éviter les collisions multiples
+        
+        // Repositionner la balle juste après la raquette pour éviter les collisions multiples
+        game.ball_x = game.paddle_left_x + game.paddle_width;
+        
+        // Jouer le son de collision
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
     }
     
     // Collision avec la raquette droite
-    if (game.ball_x + game.ball_size >= game.grid_width - paddle_margin &&
-        game.ball_y + game.ball_size >= game.paddle_right && 
-        game.ball_y <= game.paddle_right + game.paddle_right_size) {
+    if (game.ball_dx > 0 // La balle se dirige vers la droite
+        && game.ball_x + game.ball_size >= game.paddle_right_x
+        && game.ball_x + game.ball_size <= game.paddle_right_x + game.paddle_width
+        && game.ball_y + game.ball_size >= game.paddle_right_y
+        && game.ball_y <= game.paddle_right_y + game.paddle_right_size) {
+        
         game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
-        game.ball_x = game.grid_width - paddle_margin - game.ball_size; // Repositionner la balle
+        
+        // Repositionner la balle juste avant la raquette pour éviter les collisions multiples
+        game.ball_x = game.paddle_right_x - game.ball_size;
+        
+        // Jouer le son de collision
         Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
     }
     
@@ -677,9 +754,10 @@ void UART_Callback(char* msg, size_t length) {
         }
     }
     else if (strncmp(msg, "game:start", 10) == 0) {
-        // Format: game:start:width:height:points:vb:sb:vp:sp
+        // Format mis à jour: game:start:width:height:points:vb:sb:vp:sp:leftzone:rightzone
         // width = grid width, height = grid height, points = points to end the game, 
         // vb = ball velocity, sb = ball size, sp = paddle size, vp = paddle velocity
+        // leftzone = largeur de la zone gauche, rightzone = largeur de la zone droite
         char* width_pos_str = strchr(msg + 10, ':'); // Skip "game:start:"
         if (width_pos_str) {
             char* height_pos_str = strchr(width_pos_str + 1, ':');
@@ -694,6 +772,9 @@ void UART_Callback(char* msg, size_t length) {
                             if (vp_pos_str) {
                                 char* sp_pos_str = strchr(vp_pos_str + 1, ':');
                                 if (sp_pos_str) {
+                                    char* leftzone_pos_str = strchr(sp_pos_str + 1, ':');
+                                    char* rightzone_pos_str = NULL;
+                                    
                                     uint16_t grid_width = atoi(width_pos_str + 1);
                                     uint16_t grid_height = atoi(height_pos_str + 1);
                                     uint8_t max_points = atoi(points_pos_str + 1);
@@ -702,35 +783,58 @@ void UART_Callback(char* msg, size_t length) {
                                     uint8_t paddle_velocity = atoi(vp_pos_str + 1);
                                     uint8_t paddle_size = atoi(sp_pos_str + 1);
                                     
+                                    // Initialiser le jeu avec les paramètres de base
+                                    Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
+                                    
+                                    // Si les zones sont spécifiées, les mettre à jour
+                                    if (leftzone_pos_str) {
+                                        rightzone_pos_str = strchr(leftzone_pos_str + 1, ':');
+                                        game.left_zone_width = atoi(leftzone_pos_str + 1);
+                                        
+                                        if (rightzone_pos_str) {
+                                            game.right_zone_width = atoi(rightzone_pos_str + 1);
+                                        }
+                                    }
+                                    
                                     // Verify that dimensions are valid
                                     if (grid_width > 50 && grid_height > 50) {
-                                        Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
+                                        // Assurez-vous que les zones ne sont pas trop grandes
+                                        if (game.left_zone_width > grid_width / 2) {
+                                            game.left_zone_width = grid_width / 2;
+                                        }
+                                        if (game.right_zone_width > grid_width / 2) {
+                                            game.right_zone_width = grid_width / 2;
+                                        }
+                                        
+                                        // Ajuster les positions X des raquettes en fonction des zones
+                                        game.paddle_left_x = game.left_zone_width / 2;
+                                        game.paddle_right_x = grid_width - game.right_zone_width / 2 - game.paddle_width;
+                                        
+                                        // Démarrer le jeu
                                         Start_Game();
-                                        // Note: points and paddle_velocity parameters are parsed but not used yet
-                                        // They would need to be incorporated into the game logic
                                     } else {
                                         printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
                                     }
                                 } else {
-                                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
                                 }
                             } else {
-                                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
                             }
                         } else {
-                            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
                         }
                     } else {
-                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                        printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
                     }
                 } else {
-                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                    printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
                 }
             } else {
-            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+                printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
             }
         } else {
-            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp\r\n");
+            printf("Invalid command format. Use: game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone]\r\n");
         }
     }
 	else if (strncmp(msg, "game:pause", 10) == 0) {
@@ -815,14 +919,16 @@ int main(void)
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
   printf("Available commands:\r\n");
-  printf("  game:start:width:height:points:vb:sb:vp:sp - Start game with parameters:\r\n");
-  printf("    width:  grid width\r\n");
-  printf("    height: grid height\r\n");
-  printf("    points: points to end the game\r\n");
-  printf("    vb:     ball velocity\r\n");
-  printf("    sb:     ball size\r\n");
-  printf("    vp:     paddle velocity\r\n");
-  printf("    sp:     paddle size\r\n");
+  printf("  game:start:width:height:points:vb:sb:vp:sp[:leftzone:rightzone] - Start game with parameters:\r\n");
+  printf("    width:     grid width\r\n");
+  printf("    height:    grid height\r\n");
+  printf("    points:    points to end the game\r\n");
+  printf("    vb:        ball velocity\r\n");
+  printf("    sb:        ball size\r\n");
+  printf("    vp:        paddle velocity\r\n");
+  printf("    sp:        paddle size\r\n");
+  printf("    leftzone:  [optional] width of left player zone\r\n");
+  printf("    rightzone: [optional] width of right player zone\r\n");
   printf("  game:pause       - Pause the game\r\n");
   printf("  game:resume      - Resume the game\r\n");
   printf("  game:stop        - Stop the game\r\n");
