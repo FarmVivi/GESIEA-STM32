@@ -288,8 +288,8 @@ void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t leng
 // Fonction pour envoyer toutes les données du jeu à l'IHH
 void Send_Game_All_Data() {
 	// Format: "game:all:status,grip_size,paddle_size,ball_x,ball_y,ball_dx,ball_dy,paddle_left,paddle_right"
-	printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
-		game.status, GAME_GRID_SIZE, GAME_PADDLE_SIZE,
+	printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
+		game.status, GAME_GRID_SIZE, GAME_PADDLE_SIZE, GAME_BALL_SIZE,
 		game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
 		game.paddle_left, game.paddle_right);
 }
