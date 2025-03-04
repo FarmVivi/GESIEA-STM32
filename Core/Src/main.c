@@ -325,7 +325,9 @@ void Resume_Game() {
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
 void Update_Game() {
-	// TODO : Mettre à jour le jeu
+	// TODO : Lire les entrées des joysticks, boutons, etc.
+	// TODO : Mettre à jour les positions de la balle et des raquettes et gérer les collisions
+	// TODO : Gérer les victoires/défaites
 	// Envoyer les données à l'IHM
 	Send_Game_Run_Data();
 }
