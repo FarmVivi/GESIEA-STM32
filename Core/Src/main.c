@@ -215,6 +215,27 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
+// Fonction qui génère un nombre pseudo-aléatoire sur 32 bits
+uint32_t get_random_number()
+{
+    // On utilise une variable statique pour conserver la valeur de seed
+    static uint32_t seed = 0;
+    // Si le seed n'a pas été initialisé, on le prend à partir du tick actuel du SysTick
+    if (seed == 0)
+    {
+        seed = LL_SYSTICK_GetCurrentTick(); // ou une autre source d'initialisation
+    }
+    // Paramètres du LCG : multiplier et incrément (les valeurs proposées ici sont classiques)
+    seed = (1664525 * seed + 1013904223);
+    return seed;
+}
+
+// Fonction qui renvoie un nombre aléatoire compris entre min et max (inclus)
+uint32_t get_random_number_range(uint32_t min, uint32_t max)
+{
+    return min + (get_random_number() % (max - min + 1));
+}
+
 // Fonction permettant de lire la valeur numérique depuis une entrée analogique
 uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
 	// Sélectionner le canal
@@ -309,21 +330,19 @@ void Init_Game() {
     game.ball_x = GAME_GRID_SIZE / 2;
     game.ball_y = GAME_GRID_SIZE / 2;
     
-    // Définir une direction de départ aléatoire ou semi-aléatoire
-    // On utilise le temps écoulé depuis le démarrage comme "seed" pour la pseudo-randomisation
-    uint32_t ticks = LL_SYSTICK_GetCounter();
-    
-    // Alterner entre les directions gauche/droite avec un peu d'aléatoire pour la vitesse
-    if (ticks % 2 == 0) {
+    // Utiliser notre fonction random pour déterminer la direction horizontale de la balle
+    // On choisit 2 ou -2 de façon aléatoire
+    if (get_random_number_range(0, 1) == 0) {
         game.ball_dx = 2;  // Vers la droite
     } else {
         game.ball_dx = -2; // Vers la gauche
     }
     
-    // Vitesse verticale aléatoire
-    if ((ticks / 100) % 3 == 0) {
+    // Pour la vitesse verticale, on choisit aléatoirement parmi 1, 2 ou -1
+    uint32_t r = get_random_number_range(0, 2);
+    if (r == 0) {
         game.ball_dy = 1;  // Vers le bas, lentement
-    } else if ((ticks / 100) % 3 == 1) {
+    } else if (r == 1) {
         game.ball_dy = 2;  // Vers le bas, rapidement
     } else {
         game.ball_dy = -1; // Vers le haut
@@ -378,6 +397,18 @@ void Resume_Game() {
 	game.status = GAME_STATUS_RUNNING;
 	Send_Game_All_Data();
 	LL_SYSTICK_EnableIT();
+}
+
+// Fonction pour réinitialiser le jeu
+void Reset_Game() {
+    // Réinitialiser le jeu
+    Init_Game();
+
+    // Envoyer les données à l'IHM pour actualiser l'affichage
+    Send_Game_All_Data();
+
+    // Arrêter la musique de fond
+    Stop_Play_Melody();
 }
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
@@ -583,19 +614,6 @@ void Blue_Button_Callback() {
 		Resume_Game();
 	}
 }
-
-// Fonction pour réinitialiser le jeu
-void Reset_Game() {
-    // Réinitialiser le jeu
-    Init_Game();
-    
-    // Envoyer les données à l'IHM pour actualiser l'affichage
-    Send_Game_All_Data();
-    
-    // Arrêter la musique de fond
-    Stop_Play_Melody();
-}
-
 /* USER CODE END 0 */
 
 /**
