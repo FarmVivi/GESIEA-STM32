@@ -606,39 +606,39 @@ void UART_Callback(char* msg, size_t length) {
         }
     }
     else if (strncmp(msg, "game:start", 10) == 0) {
-        // Format: game:start:vb:sp:width:height
-        // vb = velocity boost, sp = paddle size, width = grid width, height = grid height
-        char* vb_pos_str = strchr(msg, ':');
-        if (vb_pos_str) {
-            char* sp_pos_str = strchr(vb_pos_str + 1, ':');
+        // Format: game:start:width:height:sp:vb
+        // width = grid width, height = grid height, vb = velocity boost, sp = paddle size
+        char* width_pos_str = strchr(msg, ':');
+        if (width_pos_str) {
+            char* height_pos_str = strchr(width_pos_str + 1, ':');
+            if (height_pos_str) {
+            char* sp_pos_str = strchr(height_pos_str + 1, ':');
             if (sp_pos_str) {
-                char* width_pos_str = strchr(sp_pos_str + 1, ':');
-                if (width_pos_str) {
-                    char* height_pos_str = strchr(width_pos_str + 1, ':');
-                    if (height_pos_str) {
-                        uint8_t velocity_boost = atoi(vb_pos_str + 1);
-                        uint8_t paddle_size = atoi(sp_pos_str + 1);
-                        uint16_t grid_width = atoi(width_pos_str + 1);
-                        uint16_t grid_height = atoi(height_pos_str + 1);
+                char* vb_pos_str = strchr(sp_pos_str + 1, ':');
+                if (vb_pos_str) {
+                uint16_t grid_width = atoi(width_pos_str + 1);
+                uint16_t grid_height = atoi(height_pos_str + 1);
+                uint8_t paddle_size = atoi(sp_pos_str + 1);
+                uint8_t velocity_boost = atoi(vb_pos_str + 1);
 
-                        // Vérifier que les dimensions sont valides
-                        if (grid_width > 50 && grid_height > 50) {
-                            Init_Game(velocity_boost, paddle_size, grid_width, grid_height);
-                            Start_Game();
-                        } else {
-                            printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
-                        }
-                    } else {
-                        printf("Invalid command format. Use: game:start:vb:sp:width:height\r\n");
-                    }
+                // Vérifier que les dimensions sont valides
+                if (grid_width > 50 && grid_height > 50) {
+                    Init_Game(velocity_boost, paddle_size, grid_width, grid_height);
+                    Start_Game();
                 } else {
-                    printf("Invalid command format. Use: game:start:vb:sp:width:height\r\n");
+                    printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
+                }
+                } else {
+                printf("Invalid command format. Use: game:start:width:height:sp:vb\r\n");
                 }
             } else {
-                printf("Invalid command format. Use: game:start:vb:sp:width:height\r\n");
+                printf("Invalid command format. Use: game:start:width:height:sp:vb\r\n");
+            }
+            } else {
+            printf("Invalid command format. Use: game:start:width:height:sp:vb\r\n");
             }
         } else {
-            printf("Invalid command format. Use: game:start:vb:sp:width:height\r\n");
+            printf("Invalid command format. Use: game:start:width:height:sp:vb\r\n");
         }
     }
 	else if (strncmp(msg, "game:pause", 10) == 0) {
