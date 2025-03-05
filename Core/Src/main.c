@@ -939,7 +939,10 @@ void Update_Game() {
             Play_Sound_P2(victory_melody, victory_length);
             Play_Sound_P1(defeat_melody, defeat_length);
             
-            // Arrêter le jeu
+            // Envoyer les données du jeu pour actualiser l'affichage avant de l'arrêter
+            Send_Game_Run_Data();
+            
+            // Arrêter le jeu sans réinitialisation
             Stop_Game();
             return;
         }
@@ -969,15 +972,18 @@ void Update_Game() {
         if (game.player1_points >= game.max_points) {
             // Fin de partie, le joueur 1 a gagné
             game.status = GAME_STATUS_FINISHED;
-
+    
             // Jouer les mélodies de victoire/défaite en même temps sur les deux buzzers respectifs
             Play_Sound_P1(victory_melody, victory_length);
             Play_Sound_P2(defeat_melody, defeat_length);
             
-            // Arrêter le jeu
+            // Envoyer les données du jeu pour actualiser l'affichage avant de l'arrêter
+            Send_Game_Run_Data();
+            
+            // Arrêter le jeu sans réinitialisation
             Stop_Game();
             return;
-        }
+        }    
         
         // Repositionner la balle au centre et inverser sa direction
         game.ball_x = game.grid_width / 2;
@@ -1060,7 +1066,7 @@ void UART_Callback(char* msg, size_t length) {
                                         game.paddle_right_x = grid_width - game.right_zone_width / 2 - game.paddle_width;
                                         
                                         // Démarrer le jeu
-                                        Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
+                                        Start_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
                                     } else {
                                         printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
                                     }
@@ -1160,9 +1166,6 @@ int main(void)
   while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
     /* Attente de l'activation de l'ADC */
   }
-
-  // Initialiser une partie random
-  Init_Game(400, 250, 5, 1, 3, 5, 6);
 
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
