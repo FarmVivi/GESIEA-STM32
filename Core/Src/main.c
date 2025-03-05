@@ -419,9 +419,6 @@ void Start_Game() {
     // Envoyer les données du jeu à l'IHM
     Send_Game_All_Data();
     
-    // Activer le timer qui fera les appels réguliers à Update_Game()
-    LL_SYSTICK_EnableIT();
-    
     // Démarrer la musique de fond
     background_index = 0;
     Update_Play_Melody();
@@ -429,7 +426,6 @@ void Start_Game() {
 
 // Fonction pour mettre en pause la partie
 void Pause_Game() {
-	LL_SYSTICK_DisableIT();
 	game.status = GAME_STATUS_PAUSED;
 	LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
 	Send_Game_All_Data();
@@ -443,14 +439,10 @@ void Resume_Game() {
 	game.status = GAME_STATUS_RUNNING;
     LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
 	Send_Game_All_Data();
-	LL_SYSTICK_EnableIT();
 }
 
 // Fonction pour réinitialiser le jeu
 void Stop_Game() {
-    // Arrêter le timer
-    LL_SYSTICK_DisableIT();
-
     // Réinitialiser la LED
     LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
 
@@ -469,6 +461,11 @@ void Stop_Game() {
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
 void Update_Game() {
+	// Si la partie est en cours
+	if (game.status != GAME_STATUS_RUNNING) {
+		return;
+	}
+
     // Lire les entrées des joysticks pour les deux joueurs
 	uint16_t joystick_y_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1);
 	uint16_t joystick_y_p2 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P2);
@@ -913,9 +910,6 @@ int main(void)
     /* Attente de l'activation de l'ADC */
   }
 
-  // Jouer la mélodie de démarrage
-  Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, init_melody, init_length);
-
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
   printf("Available commands:\r\n");
@@ -945,6 +939,12 @@ int main(void)
   printf("  beep:dura:buzz   - Beep for duration (ms) using buzzer (1 or 2)\r\n");
   printf("  echo:message     - Echo back message\r\n");
   printf("-------------------------------------\r\n\r\n");
+
+  // Activer le timer qui fera les appels réguliers à Update_Game()
+  LL_SYSTICK_EnableIT();
+
+  // Jouer la mélodie de démarrage
+  Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, init_melody, init_length);
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -46,12 +46,11 @@
 static char uartBuffer[UART_BUFFER_SIZE];
 static uint16_t uartBufferIndex = 0;
 #define SYSTICK_TIME 1000 // 1ms
+static uint32_t systick = 0;
 #define GAMETICK_FREQ 30 // 30Hz (30ms)
 #define GAMETICK_PERIOD (SYSTICK_TIME / GAMETICK_FREQ)
-static uint32_t gametick = 0;
 #define MUSICTICK_FREQ 4 // 4Hz (250ms)
 #define MUSICTICK_PERIOD (SYSTICK_TIME / MUSICTICK_FREQ)
-static uint32_t musictick = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,21 +134,22 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-  gametick++;
-  if(gametick == GAMETICK_PERIOD)
+  systick++;
+
+  // Ticks pour le jeu
+  if(systick % GAMETICK_PERIOD == 0)
   {
-	  gametick = 0;
 	  Update_Game();
   }
 
-  musictick++;
-  if(musictick == MUSICTICK_PERIOD - 50)
+  // Ticks pour la musique
+  // Arrêter la note 50ms avant de lire la suivante
+  if(systick % MUSICTICK_PERIOD == MUSICTICK_PERIOD - 5)
   {
 	  Stop_Play_Melody();
   }
-  if(musictick == MUSICTICK_PERIOD)
+  if(systick % MUSICTICK_PERIOD == 0)
   {
-	  musictick = 0;
 	  Update_Play_Melody();
   }
   /* USER CODE END SysTick_IRQn 0 */
