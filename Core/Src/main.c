@@ -344,6 +344,27 @@ int _write(int file, char *ptr, int len) {
 }
 
 /**
+ * @brief Lit une valeur depuis une entrée analogique.
+ *
+ * @param ADCx Périphérique ADC à utiliser
+ * @param Channel Canal ADC à lire
+ * @return Valeur lue (0-4095)
+ */
+uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
+	// Sélectionner le canal
+	LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
+	// Démarrer la conversion
+	LL_ADC_REG_StartConversion(ADCx);
+	// Attendre la fin de la conversion
+	while (!LL_ADC_IsActiveFlag_EOC(ADCx));
+	// Lire la valeur
+	uint16_t value = LL_ADC_REG_ReadConversionData12(ADCx);
+	// Effacer le flag de fin de conversion
+	LL_ADC_ClearFlag_EOC(ADCx);
+	return value;
+}
+
+/**
  * @brief Génère un nombre pseudo-aléatoire avec entropie améliorée.
  *
  * Utilise les sources d'entropie matérielles (ADC, timers) et un
@@ -358,14 +379,11 @@ uint32_t get_random_number()
 
     // Initialiser la graine avec diverses sources d'entropie au premier appel
     if (!initialized) {
-        // Utiliser le compteur système comme base
-        seed ^= LL_SYSTICK_GetCounter();
-
         // Ajouter de l'entropie avec les valeurs des joysticks
-        seed ^= Read_ADC_Value(ADC1, JOYSTICK_X_CHANNEL_P1);
-        seed ^= Read_ADC_Value(ADC1, JOYSTICK_Y_CHANNEL_P1) << 8;
-        seed ^= Read_ADC_Value(ADC1, JOYSTICK_X_CHANNEL_P2) << 16;
-        seed ^= Read_ADC_Value(ADC1, JOYSTICK_Y_CHANNEL_P2) << 24;
+        seed ^= Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_X_CHANNEL_P1);
+        seed ^= Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1) << 8;
+        seed ^= Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_X_CHANNEL_P2) << 16;
+        seed ^= Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P2) << 24;
 
         // Ajouter les valeurs des timers
         seed ^= LL_TIM_GetCounter(TIM2);
@@ -398,27 +416,6 @@ uint32_t get_random_number()
 uint32_t get_random_number_range(uint32_t min, uint32_t max)
 {
     return min + (get_random_number() % (max - min + 1));
-}
-
-/**
- * @brief Lit une valeur depuis une entrée analogique.
- *
- * @param ADCx Périphérique ADC à utiliser
- * @param Channel Canal ADC à lire
- * @return Valeur lue (0-4095)
- */
-uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
-	// Sélectionner le canal
-	LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
-	// Démarrer la conversion
-	LL_ADC_REG_StartConversion(ADCx);
-	// Attendre la fin de la conversion
-	while (!LL_ADC_IsActiveFlag_EOC(ADCx));
-	// Lire la valeur
-	uint16_t value = LL_ADC_REG_ReadConversionData12(ADCx);
-	// Effacer le flag de fin de conversion
-	LL_ADC_ClearFlag_EOC(ADCx);
-	return value;
 }
 
 /**
