@@ -577,94 +577,94 @@ void Send_Game_Run_Data() {
         game.player1_points, game.player2_points);
 }
 
-// Fonction pour initialiser le jeu Pong
-void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
-    // Initialiser les dimensions de la grille
-    game.grid_width = width;
-    game.grid_height = height;
-
-    // Initialiser la taille des raquettes
-    game.paddle_left_size = paddle_size;
-    game.paddle_right_size = paddle_size;
-    game.paddle_width = 8;  // Largeur fixe des raquettes
-    
-    // Initialiser la taille de la balle
-    game.ball_size = ball_size;
-    
-    // Initialiser la vitesse des raquettes
-    game.paddle_speed = paddle_velocity;
-
-    // Initialiser les points
-    game.max_points = max_points;
-    game.player1_points = 0;
-    game.player2_points = 0;
-
-    // Initialiser les zones de jeu des joueurs
-    game.left_zone_width = width / 4;   // 25% du terrain à gauche
-    game.right_zone_width = width / 4;  // 25% du terrain à droite
-
-    // Réinitialiser la position de la balle au centre
-    game.ball_x = game.grid_width / 2;
-    game.ball_y = game.grid_height / 2;
-    
-    // Déterminer aléatoirement la direction horizontale de la balle
-    if (get_random_number_range(0, 1) == 0) {
-        game.ball_dx = 2 + ball_velocity;  // Vers la droite
-    } else {
-        game.ball_dx = -2 - ball_velocity; // Vers la gauche
-    }
-    
-    // Choisir aléatoirement la vitesse verticale
-    uint32_t r = get_random_number_range(0, 2);
-    if (r == 0) {
-        game.ball_dy = 1 + ball_velocity;  // Vers le bas, lentement
-    } else if (r == 1) {
-        game.ball_dy = 2 + ball_velocity;  // Vers le bas, rapidement
-    } else {
-        game.ball_dy = -1 - ball_velocity; // Vers le haut
-    }
-    
-    // Positionner les raquettes
-    game.paddle_left_x = 20;  // Position X initiale de la raquette gauche
-    game.paddle_left_y = (game.grid_height - game.paddle_left_size) / 2;  // Centrer verticalement
-    
-    game.paddle_right_x = game.grid_width - 20 - game.paddle_width;  // Position X initiale de la raquette droite
-    game.paddle_right_y = (game.grid_height - game.paddle_right_size) / 2;  // Centrer verticalement
-    
-    // Statut initial
-    game.status = GAME_STATUS_NONE;
-
-    // Initialiser les variables de boost
-    game.player1_button_state = 0;
-    game.player1_prev_button_state = 0;
-    game.player1_boost_ready = 0;
-    game.player1_boost_counter = 0;
-
-    game.player2_button_state = 0;
-    game.player2_prev_button_state = 0;
-    game.player2_boost_ready = 0;
-    game.player2_boost_counter = 0;
-
-    game.boost_window = 10;  // 10 ticks de jeu (environ 300ms à 30Hz)
-    game.boost_factor = 150; // 150% de la vitesse normale
-}
-
 // Fonction pour lancer la partie
-void Start_Game() {
-    // Jouer la mélodie de démarrage
-    Play_Sound(game_start_melody, game_start_length);
-    
-    // Définir le statut à "running"
-    game.status = GAME_STATUS_RUNNING;
-    
-    // Allumer la LED du microcontrôleur
-    LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
+	// Initialiser les dimensions de la grille
+	game.grid_width = width;
+	game.grid_height = height;
 
-    // Envoyer les données du jeu à l'IHM
-    Send_Game_All_Data();
-    
-    // Démarrer la musique de fond en boucle
-    Start_Music(background_melody, background_length);
+	// Initialiser la taille des raquettes
+	game.paddle_left_size = paddle_size;
+	game.paddle_right_size = paddle_size;
+	game.paddle_width = 8;  // Largeur fixe des raquettes
+
+	// Initialiser la taille de la balle
+	game.ball_size = ball_size;
+
+	// Initialiser la vitesse des raquettes
+	game.paddle_speed = paddle_velocity;
+
+	// Initialiser les points
+	game.max_points = max_points;
+	game.player1_points = 0;
+	game.player2_points = 0;
+
+	// Initialiser les zones de jeu des joueurs
+	game.left_zone_width = width / 4;   // 25% du terrain à gauche
+	game.right_zone_width = width / 4;  // 25% du terrain à droite
+
+	// Réinitialiser la position de la balle au centre
+	game.ball_x = game.grid_width / 2;
+	game.ball_y = game.grid_height / 2;
+
+	// Déterminer aléatoirement la direction horizontale de la balle
+	if (get_random_number_range(0, 1) == 0) {
+		game.ball_dx = 2 + ball_velocity;  // Vers la droite
+	} else {
+		game.ball_dx = -2 - ball_velocity; // Vers la gauche
+	}
+
+	// Choisir aléatoirement la vitesse verticale
+	uint32_t r = get_random_number_range(0, 2);
+	if (r == 0) {
+		game.ball_dy = 1 + ball_velocity;  // Vers le bas, lentement
+	} else if (r == 1) {
+		game.ball_dy = 2 + ball_velocity;  // Vers le bas, rapidement
+	} else {
+		game.ball_dy = -1 - ball_velocity; // Vers le haut
+	}
+
+	// Positionner les raquettes
+	game.paddle_left_x = 20;  // Position X initiale de la raquette gauche
+	game.paddle_left_y = (game.grid_height - game.paddle_left_size) / 2;  // Centrer verticalement
+
+	game.paddle_right_x = game.grid_width - 20 - game.paddle_width;  // Position X initiale de la raquette droite
+	game.paddle_right_y = (game.grid_height - game.paddle_right_size) / 2;  // Centrer verticalement
+
+	// Initialiser les variables de boost
+	game.player1_button_state = 0;
+	game.player1_prev_button_state = 0;
+	game.player1_boost_ready = 0;
+	game.player1_boost_counter = 0;
+
+	game.player2_button_state = 0;
+	game.player2_prev_button_state = 0;
+	game.player2_boost_ready = 0;
+	game.player2_boost_counter = 0;
+
+	game.boost_window = 10;  // 10 ticks de jeu (environ 300ms à 30Hz)
+	game.boost_factor = 150; // 150% de la vitesse normale
+
+	// Par défaut, définir le statut à "none"
+	game.status = GAME_STATUS_NONE;
+
+	// Envoyer les données du jeu à l'IHM
+	Send_Game_All_Data();
+
+	// Jouer la mélodie de démarrage
+	Play_Sound(game_start_melody, game_start_length);
+
+	// Définir le statut à "running"
+	game.status = GAME_STATUS_RUNNING;
+
+	// Allumer la LED du microcontrôleur
+	LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
+
+	// Envoyer les données du jeu à l'IHM avec le nouveau statut
+	Send_Game_All_Data();
+
+	// Démarrer la musique de fond en boucle
+	Start_Music(background_melody, background_length);
 }
 
 // Fonction pour mettre en pause la partie
@@ -701,14 +701,14 @@ void Stop_Game() {
     // Arrêter la musique de fond
     Stop_Music();
 
+    // Changer le statut du jeu
+    game.status = GAME_STATUS_FINISHED;
+
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
 
-    // Jouer la mélodie de fin de partie
-    Play_Sound(disconnection_melody, disconnection_length);
-
-    // Réinitialiser le jeu avec les valeurs actuelles
-    Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
+    // Changer le statut du jeu
+    game.status = GAME_STATUS_NONE;
 }
 
 // Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
@@ -1034,10 +1034,7 @@ void UART_Callback(char* msg, size_t length) {
                                     uint8_t ball_size = atoi(sb_pos_str + 1);
                                     uint8_t paddle_velocity = atoi(vp_pos_str + 1);
                                     uint8_t paddle_size = atoi(sp_pos_str + 1);
-                                    
-                                    // Initialiser le jeu avec les paramètres de base
-                                    Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
-                                    
+
                                     // Si les zones sont spécifiées, les mettre à jour
                                     if (leftzone_pos_str) {
                                         rightzone_pos_str = strchr(leftzone_pos_str + 1, ':');
@@ -1063,7 +1060,7 @@ void UART_Callback(char* msg, size_t length) {
                                         game.paddle_right_x = grid_width - game.right_zone_width / 2 - game.paddle_width;
                                         
                                         // Démarrer le jeu
-                                        Start_Game();
+                                        Init_Game(grid_width, grid_height, max_points, ball_velocity, ball_size, paddle_velocity, paddle_size);
                                     } else {
                                         printf("Invalid grid dimensions. Minimum size is 50x50.\r\n");
                                     }
@@ -1107,8 +1104,7 @@ void UART_Callback(char* msg, size_t length) {
 void Blue_Button_Callback() {
 	// Si la partie n'est pas en cours, démarrer la partie
 	if (game.status == GAME_STATUS_NONE) {
-		Init_Game(400, 250, 5, 1, 3, 5, 6);
-		Start_Game();
+		Start_Game(400, 250, 5, 1, 3, 5, 6);
 	} else if (game.status == GAME_STATUS_RUNNING) {
 		Pause_Game();
 	} else if (game.status == GAME_STATUS_PAUSED) {
