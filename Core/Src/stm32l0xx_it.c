@@ -149,7 +149,7 @@ void SysTick_Handler(void)
   }
 
   // Ticks pour arrêter le son (8Hz - toutes les 125ms, avec 25ms de décalage)
-  if(systick % MUSICTICK_PERIOD == 100)
+  if(systick % MUSICTICK_PERIOD == 124)
   {
       Stop_Sound();
   }

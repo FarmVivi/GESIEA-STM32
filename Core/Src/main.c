@@ -46,6 +46,8 @@ typedef struct {
     TIM_TypeDef *timer;        // Timer à utiliser
     uint8_t isPlaying;         // Indique si une mélodie est en cours
     uint8_t loopMode;          // Indique si la mélodie doit être jouée en boucle
+    uint32_t currentFrequency; // Fréquence actuellement jouée
+    uint8_t continuePlaying;   // Indique si on doit continuer à jouer sans coupure
 } MelodyPlayer;
 
 // Structure pour le status du jeu
@@ -229,9 +231,9 @@ Note background_melody[] = {
 size_t background_length = sizeof(background_melody) / sizeof(Note);
 
 // Variables globales pour la gestion des mélodies - un player par buzzer
-MelodyPlayer buzzer1Player = {0};      // Pour le buzzer du joueur 1
-MelodyPlayer buzzer2Player = {0};      // Pour le buzzer du joueur 2
-MelodyPlayer backgroundPlayer = {0};   // Pour la musique de fond
+MelodyPlayer buzzer1Player = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+MelodyPlayer buzzer2Player = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+MelodyPlayer backgroundPlayer = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // Jeu
 Game game =	{
@@ -357,6 +359,8 @@ void Start_Melody(MelodyPlayer *player, TIM_TypeDef *TIMx, uint32_t Channels, No
     player->timer = TIMx;
     player->isPlaying = 1;
     player->loopMode = loop;
+    player->currentFrequency = 0;
+    player->continuePlaying = 0;
     
     // La note sera jouée au prochain appel à Update_Sound
 }
@@ -407,15 +411,30 @@ void Update_Sound() {
         // Jouer la note actuelle
         if (buzzer1Player.currentIndex < buzzer1Player.length) {
             Note currentNote = buzzer1Player.melody[buzzer1Player.currentIndex];
+
+            // Vérifier si la prochaine note est la même que l'actuelle
+            uint8_t skipSilence = 0;
+            if (buzzer1Player.currentIndex + 1 < buzzer1Player.length) {
+                Note nextNote = buzzer1Player.melody[buzzer1Player.currentIndex + 1];
+                if (nextNote.frequency == currentNote.frequency && currentNote.frequency != 0) {
+                    skipSilence = 1;
+                }
+            }
+
+            // Sauvegarder la fréquence actuelle
+            buzzer1Player.currentFrequency = currentNote.frequency;
+            buzzer1Player.continuePlaying = skipSilence;
+
+            // Jouer la note (seulement si différente de la précédente ou après un silence)
             Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, currentNote.frequency);
+
             buzzer1Player.currentIndex++;
 
             // Vérifier si nous avons atteint la fin de la mélodie
             if (buzzer1Player.currentIndex >= buzzer1Player.length) {
                 if (!buzzer1Player.loopMode) {
-                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
+                    // Marquer comme terminé
                     buzzer1Player.isPlaying = 0;
-                    // La note sera arrêtée par Stop_Sound()
                 } else {
                     // Boucler au début
                     buzzer1Player.currentIndex = 0;
@@ -424,45 +443,72 @@ void Update_Sound() {
         }
     }
 
-    // Mise à jour du buzzer 2
+    // Mise à jour du buzzer 2 (même logique)
     if (buzzer2Player.isPlaying) {
-        // Jouer la note actuelle
         if (buzzer2Player.currentIndex < buzzer2Player.length) {
             Note currentNote = buzzer2Player.melody[buzzer2Player.currentIndex];
+
+            // Vérifier si la prochaine note est la même que l'actuelle
+            uint8_t skipSilence = 0;
+            if (buzzer2Player.currentIndex + 1 < buzzer2Player.length) {
+                Note nextNote = buzzer2Player.melody[buzzer2Player.currentIndex + 1];
+                if (nextNote.frequency == currentNote.frequency && currentNote.frequency != 0) {
+                    skipSilence = 1;
+                }
+            }
+
+            // Sauvegarder la fréquence actuelle
+            buzzer2Player.currentFrequency = currentNote.frequency;
+            buzzer2Player.continuePlaying = skipSilence;
+
+            // Jouer la note
             Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, currentNote.frequency);
+
             buzzer2Player.currentIndex++;
             
             // Vérifier si nous avons atteint la fin de la mélodie
             if (buzzer2Player.currentIndex >= buzzer2Player.length) {
                 if (!buzzer2Player.loopMode) {
-                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
                     buzzer2Player.isPlaying = 0;
-                    // La note sera arrêtée par Stop_Sound()
                 } else {
-                    // Boucler au début
                     buzzer2Player.currentIndex = 0;
                 }
             }
         }
     }
 
-    // Mise à jour de la musique de fond
+    // Mise à jour de la musique de fond (même logique)
     if (backgroundPlayer.isPlaying) {
-        // Jouer la note actuelle de la musique de fond
         if (backgroundPlayer.currentIndex < backgroundPlayer.length) {
             Note currentNote = backgroundPlayer.melody[backgroundPlayer.currentIndex];
+
+            // Vérifier si la prochaine note est la même que l'actuelle
+            uint8_t skipSilence = 0;
+            if (backgroundPlayer.currentIndex + 1 < backgroundPlayer.length) {
+                Note nextNote = backgroundPlayer.melody[backgroundPlayer.currentIndex + 1];
+                if (nextNote.frequency == currentNote.frequency && currentNote.frequency != 0) {
+                    skipSilence = 1;
+                }
+            } else if (backgroundPlayer.loopMode && backgroundPlayer.length > 0) {
+                // Si on est en mode boucle, vérifier également avec la première note
+                Note nextNote = backgroundPlayer.melody[0];
+                if (nextNote.frequency == currentNote.frequency && currentNote.frequency != 0) {
+                    skipSilence = 1;
+                }
+            }
+
+            backgroundPlayer.currentFrequency = currentNote.frequency;
+            backgroundPlayer.continuePlaying = skipSilence;
+
             Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, currentNote.frequency);
+
             backgroundPlayer.currentIndex++;
             
-            // Vérifier si nous avons atteint la fin de la mélodie
             if (backgroundPlayer.currentIndex >= backgroundPlayer.length) {
                 if (backgroundPlayer.loopMode) {
-                    // Boucler au début
                     backgroundPlayer.currentIndex = 0;
                 } else {
-                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
                     backgroundPlayer.isPlaying = 0;
-                    // La note sera arrêtée par Stop_Sound()
                 }
             }
         }
@@ -471,25 +517,29 @@ void Update_Sound() {
 
 // Fonction pour arrêter les sons - appelée 25ms après Update_Sound
 void Stop_Sound() {
-    // Arrêter les notes courantes pour créer une pause entre les notes
+    // Ne couper le son que si on ne doit pas continuer à jouer la même note
     if (buzzer1Player.isPlaying) {
-        Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, 0);
+        if (!buzzer1Player.continuePlaying) {
+            Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, 0);
+        }
     } else if (buzzer1Player.currentIndex >= buzzer1Player.length && !buzzer1Player.loopMode) {
         // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
         Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, 0);
     }
 
     if (buzzer2Player.isPlaying) {
-        Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, 0);
+        if (!buzzer2Player.continuePlaying) {
+            Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, 0);
+        }
     } else if (buzzer2Player.currentIndex >= buzzer2Player.length && !buzzer2Player.loopMode) {
-        // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
         Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, 0);
     }
 
     if (backgroundPlayer.isPlaying) {
-        Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
+        if (!backgroundPlayer.continuePlaying) {
+            Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
+        }
     } else if (backgroundPlayer.currentIndex >= backgroundPlayer.length && !backgroundPlayer.loopMode) {
-        // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
         Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
     }
 }
