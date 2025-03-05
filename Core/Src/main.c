@@ -360,7 +360,7 @@ void Resume_Music() {
 	backgroundPlayer.isPlaying = 1;
 }
 
-// Fonction pour jouer les sons - appelée toutes les 250ms
+// Fonction pour jouer les sons - appelée toutes les 125ms
 void Update_Sound() {
     // Mise à jour du buzzer 1
     if (buzzer1Player.isPlaying) {
@@ -429,7 +429,7 @@ void Update_Sound() {
     }
 }
 
-// Fonction pour arrêter les sons - appelée 50ms après Update_Sound
+// Fonction pour arrêter les sons - appelée 25ms après Update_Sound
 void Stop_Sound() {
     // Arrêter les notes courantes pour créer une pause entre les notes
     if (buzzer1Player.isPlaying) {

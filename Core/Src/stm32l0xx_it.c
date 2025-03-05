@@ -49,7 +49,7 @@ static uint16_t uartBufferIndex = 0;
 static uint32_t systick = 0;
 #define GAMETICK_FREQ 30 // 30Hz (30ms)
 #define GAMETICK_PERIOD (SYSTICK_TIME / GAMETICK_FREQ)
-#define MUSICTICK_FREQ 4 // 4Hz (250ms)
+#define MUSICTICK_FREQ 8 // 8Hz (125ms)
 #define MUSICTICK_PERIOD (SYSTICK_TIME / MUSICTICK_FREQ)
 /* USER CODE END PV */
 
@@ -142,14 +142,14 @@ void SysTick_Handler(void)
 	  Update_Game();
   }
 
-  // Ticks pour la musique (4Hz - toutes les 250ms)
+  // Ticks pour la musique (8Hz - toutes les 125ms)
   if(systick % MUSICTICK_PERIOD == 0)
   {
       Update_Sound();
   }
 
-  // Ticks pour arrêter le son (4Hz - toutes les 250ms, avec 50ms de décalage)
-  if(systick % MUSICTICK_PERIOD == 200)
+  // Ticks pour arrêter le son (8Hz - toutes les 125ms, avec 25ms de décalage)
+  if(systick % MUSICTICK_PERIOD == 100)
   {
       Stop_Sound();
   }
