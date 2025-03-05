@@ -73,6 +73,19 @@ typedef struct {
     uint8_t player2_points;
     uint16_t left_zone_width;
     uint16_t right_zone_width;
+    // Boost
+    uint8_t player1_button_state;     // État actuel du bouton du joueur 1
+    uint8_t player1_prev_button_state; // État précédent du bouton du joueur 1
+    uint8_t player1_boost_ready;       // Indique si le boost du joueur 1 est prêt
+    uint8_t player1_boost_counter;     // Compteur pour le joueur 1
+
+    uint8_t player2_button_state;     // État actuel du bouton du joueur 2
+    uint8_t player2_prev_button_state; // État précédent du bouton du joueur 2
+    uint8_t player2_boost_ready;       // Indique si le boost du joueur 2 est prêt
+    uint8_t player2_boost_counter;     // Compteur pour le joueur 2
+
+    uint8_t boost_window;             // Fenêtre de temps pour le boost (en ticks)
+    uint8_t boost_factor;             // Facteur de boost (en pourcentage)
 } Game;
 /* USER CODE END PTD */
 
@@ -104,6 +117,15 @@ typedef struct {
 #define NOTE_F5  698.46  // Fa5
 #define NOTE_FS5 739.99  // Fa#5/Sol♭5
 #define NOTE_G5  783.99  // Sol5
+#define NOTE_GS5 830.61  // Sol#5/La♭5
+#define NOTE_A5  880.00  // La5
+#define NOTE_AS5 932.33  // La#5/Si♭5
+#define NOTE_B5  987.77  // Si5
+#define NOTE_C6  1046.50 // Do6
+#define NOTE_CS6 1108.73 // Do#6/Ré♭6
+#define NOTE_D6  1174.66 // Ré6
+#define NOTE_DS6 1244.51 // Ré#6/Mi♭6
+#define NOTE_E6  1318.51 // Mi6
 
 // Status du jeu
 #define GAME_STATUS_NONE 0
@@ -186,10 +208,16 @@ Note resume_melody[] = {
 size_t resume_length = sizeof(resume_melody) / sizeof(Note);
 
 // Mélodie de touche - plus dynamique mais toujours courte
-Note pong_hit_sound[] = {
+Note hit_sound[] = {
     {NOTE_A4}, {NOTE_E5}, {NOTE_A4}, {0}
 };
-size_t pong_hit_length = sizeof(pong_hit_sound) / sizeof(Note);
+size_t hit_length = sizeof(hit_sound) / sizeof(Note);
+
+// Mélodie de touche boostée - plus forte et plus aiguë
+Note boost_sound[] = {
+    {NOTE_E5}, {NOTE_G5}, {NOTE_C6}, {NOTE_G5}, {NOTE_E6}
+};
+size_t boost_sound_length = sizeof(boost_sound) / sizeof(Note);
 
 // Mélodie de victoire - fanfare triomphante
 Note victory_melody[] = {
@@ -236,29 +264,7 @@ MelodyPlayer buzzer2Player = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 MelodyPlayer backgroundPlayer = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 // Jeu
-Game game =	{
-	.grid_width = 400,
-	.grid_height = 250,
-	.ball_x = 200,
-	.ball_y = 125,
-	.ball_dx = 1,
-	.ball_dy = 1,
-    .paddle_left_x = 20,
-    .paddle_left_y = 125,
-    .paddle_right_x = 380,
-    .paddle_right_y = 125,
-	.paddle_left_size = 6,
-	.paddle_right_size = 6,
-    .paddle_width = 8,
-	.ball_size = 3,
-	.paddle_speed = 5,
-	.status = GAME_STATUS_NONE,
-    .max_points = 5,
-    .player1_points = 0,
-    .player2_points = 0,
-    .left_zone_width = 100,
-    .right_zone_width = 100
-};
+Game game =	{0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -627,6 +633,20 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball
     
     // Statut initial
     game.status = GAME_STATUS_NONE;
+
+    // Initialiser les variables de boost
+    game.player1_button_state = 0;
+    game.player1_prev_button_state = 0;
+    game.player1_boost_ready = 0;
+    game.player1_boost_counter = 0;
+
+    game.player2_button_state = 0;
+    game.player2_prev_button_state = 0;
+    game.player2_boost_ready = 0;
+    game.player2_boost_counter = 0;
+
+    game.boost_window = 10;  // 10 ticks de jeu (environ 300ms à 30Hz)
+    game.boost_factor = 150; // 150% de la vitesse normale
 }
 
 // Fonction pour lancer la partie
@@ -697,6 +717,41 @@ void Update_Game() {
 	if (game.status != GAME_STATUS_RUNNING) {
 		return;
 	}
+
+    // Mettre à jour l'état des boutons et du boost
+    // Sauvegarder l'état précédent des boutons
+    game.player1_prev_button_state = game.player1_button_state;
+    game.player2_prev_button_state = game.player2_button_state;
+
+    // Lire l'état actuel des boutons
+    game.player1_button_state = !LL_GPIO_IsInputPinSet(BUTTON_GPIO, BUTTON_PIN_P1);
+    game.player2_button_state = !LL_GPIO_IsInputPinSet(BUTTON_GPIO, BUTTON_PIN_P2);
+
+    // Détecter les appuis sur les boutons (transition de non-appuyé à appuyé)
+    if (game.player1_button_state && !game.player1_prev_button_state) {
+        game.player1_boost_ready = 1;
+        game.player1_boost_counter = 0;
+    }
+
+    if (game.player2_button_state && !game.player2_prev_button_state) {
+        game.player2_boost_ready = 1;
+        game.player2_boost_counter = 0;
+    }
+
+    // Incrémenter les compteurs et désactiver le boost s'il expire
+    if (game.player1_boost_ready) {
+        game.player1_boost_counter++;
+        if (game.player1_boost_counter > game.boost_window) {
+            game.player1_boost_ready = 0;
+        }
+    }
+
+    if (game.player2_boost_ready) {
+        game.player2_boost_counter++;
+        if (game.player2_boost_counter > game.boost_window) {
+            game.player2_boost_ready = 0;
+        }
+    }
 
     // Lire les entrées des joysticks pour les deux joueurs
 	uint16_t joystick_y_p1 = Read_ADC_Value(JOYSTICK_ADC, JOYSTICK_Y_CHANNEL_P1);
@@ -786,7 +841,7 @@ void Update_Game() {
     // Gestion des collisions avec les bords supérieur et inférieur
     if (game.ball_y <= 0 || game.ball_y + game.ball_size >= game.grid_height) {
         game.ball_dy = -game.ball_dy; // Inverser la direction verticale
-        Play_Sound(pong_hit_sound, pong_hit_length);
+        Play_Sound(hit_sound, hit_length);
     }
     
     // Gestion des collisions avec les raquettes
@@ -798,15 +853,38 @@ void Update_Game() {
         && game.ball_y + game.ball_size >= game.paddle_left_y
         && game.ball_y <= game.paddle_left_y + game.paddle_left_size) {
         
-        game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
+        // Inverser la direction horizontale
+        game.ball_dx = -game.ball_dx;
+
+        // Appliquer le boost si activé
+        if (game.player1_boost_ready) {
+            // Calculer les nouvelles vitesses (augmenter de game.boost_factor %)
+            game.ball_dx = (game.ball_dx * game.boost_factor) / 100;
+
+            // S'assurer que la vitesse minimum est maintenue
+            if (game.ball_dx > -2) game.ball_dx = -2;
+
+            // Appliquer aussi au mouvement vertical
+            game.ball_dy = (game.ball_dy * game.boost_factor) / 100;
+
+            // S'assurer que la vitesse verticale minimum est maintenue
+            if (game.ball_dy > 0 && game.ball_dy < 1) game.ball_dy = 1;
+            if (game.ball_dy < 0 && game.ball_dy > -1) game.ball_dy = -1;
+
+            // Réinitialiser le boost
+            game.player1_boost_ready = 0;
+
+            // Jouer le son de boost
+            Play_Sound_P1(boost_sound, boost_sound_length);
+        } else {
+            // Son normal de collision
+            Play_Sound_P1(hit_sound, hit_length);
+        }
         
         // Repositionner la balle juste après la raquette pour éviter les collisions multiples
         game.ball_x = game.paddle_left_x + game.paddle_width;
-        
-        // Jouer le son de collision sur le buzzer du joueur 1
-        Play_Sound_P1(pong_hit_sound, pong_hit_length);
     }
-    
+
     // Collision avec la raquette droite
     if (game.ball_dx > 0 // La balle se dirige vers la droite
         && game.ball_x + game.ball_size >= game.paddle_right_x
@@ -814,20 +892,43 @@ void Update_Game() {
         && game.ball_y + game.ball_size >= game.paddle_right_y
         && game.ball_y <= game.paddle_right_y + game.paddle_right_size) {
         
-        game.ball_dx = -game.ball_dx; // Inverser la direction horizontale
+        // Inverser la direction horizontale
+        game.ball_dx = -game.ball_dx;
+
+        // Appliquer le boost si activé
+        if (game.player2_boost_ready) {
+            // Calculer les nouvelles vitesses (augmenter de game.boost_factor %)
+            game.ball_dx = (game.ball_dx * game.boost_factor) / 100;
+
+            // S'assurer que la vitesse minimum est maintenue
+            if (game.ball_dx < 2) game.ball_dx = 2;
+
+            // Appliquer aussi au mouvement vertical
+            game.ball_dy = (game.ball_dy * game.boost_factor) / 100;
+
+            // S'assurer que la vitesse verticale minimum est maintenue
+            if (game.ball_dy > 0 && game.ball_dy < 1) game.ball_dy = 1;
+            if (game.ball_dy < 0 && game.ball_dy > -1) game.ball_dy = -1;
+
+            // Réinitialiser le boost
+            game.player2_boost_ready = 0;
+
+            // Jouer le son de boost
+            Play_Sound_P2(boost_sound, boost_sound_length);
+        } else {
+            // Son normal de collision
+            Play_Sound_P2(hit_sound, hit_length);
+        }
         
         // Repositionner la balle juste avant la raquette pour éviter les collisions multiples
         game.ball_x = game.paddle_right_x - game.ball_size;
-        
-        // Jouer le son de collision sur le buzzer du joueur 2
-        Play_Sound_P2(pong_hit_sound, pong_hit_length);
     }
     
     // Gestion des conditions de score
     if (game.ball_x <= 0) {
         // Joueur 2 marque un point
         game.player2_points++;
-        Play_Sound_P2(pong_hit_sound, pong_hit_length);
+        Play_Sound_P2(hit_sound, hit_length);
         
         // Vérifier si le joueur 2 a gagné la partie
         if (game.player2_points >= game.max_points) {
@@ -862,7 +963,7 @@ void Update_Game() {
     if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 marque un point
         game.player1_points++;
-        Play_Sound_P1(pong_hit_sound, pong_hit_length);
+        Play_Sound_P1(hit_sound, hit_length);
         
         // Vérifier si le joueur 1 a gagné la partie
         if (game.player1_points >= game.max_points) {
@@ -1063,6 +1164,9 @@ int main(void)
   while (!LL_ADC_IsActiveFlag_ADRDY(ADC1)) {
     /* Attente de l'activation de l'ADC */
   }
+
+  // Initialiser une partie random
+  Init_Game(400, 250, 5, 1, 3, 5, 6);
 
   // Message de démarrage
   printf("\r\n\r\n---- GESIEA v1.0.0 - STM32 GamePad Initialized ----\r\n");
