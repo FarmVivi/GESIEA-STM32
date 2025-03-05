@@ -72,6 +72,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN EFP */
 void Update_Sound();
 void Stop_Sound();
+void Update_LEDs();
 void Update_Game();
 void UART_Callback(char* msg, size_t length);
 void Blue_Button_Callback();

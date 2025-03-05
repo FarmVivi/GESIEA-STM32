@@ -50,6 +50,18 @@ typedef struct {
     uint8_t continuePlaying;   // Indique si on doit continuer à jouer sans coupure
 } MelodyPlayer;
 
+// Structure pour la gestion des LED de victoire
+typedef struct {
+    GPIO_TypeDef *gpio;     // Port GPIO 
+    uint32_t pin;           // Pin de la LED
+    uint32_t duration;      // Durée d'allumage en ticks (30Hz)
+    uint32_t counter;       // Compteur de ticks
+    uint8_t isActive;       // Indique si la LED est active
+    uint8_t blinkMode;      // Indique si la LED doit clignoter
+    uint32_t blinkPeriod;   // Période de clignotement en ticks
+    uint8_t blinkState;     // État actuel du clignotement (1=allumé, 0=éteint)
+} LEDPlayer;
+
 // Structure pour le status du jeu
 typedef struct {
     uint16_t grid_width;
@@ -262,9 +274,13 @@ Note background_melody[] = {
 size_t background_length = sizeof(background_melody) / sizeof(Note);
 
 // Variables globales pour la gestion des mélodies - un player par buzzer
-MelodyPlayer buzzer1Player = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-MelodyPlayer buzzer2Player = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-MelodyPlayer backgroundPlayer = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+MelodyPlayer buzzer1Player = {0};
+MelodyPlayer buzzer2Player = {0};
+MelodyPlayer backgroundPlayer = {0};
+
+// Instances pour les LED de victoire
+LEDPlayer led1Player = {0};
+LEDPlayer led2Player = {0};
 
 // Jeu
 Game game =	{0};
@@ -551,6 +567,92 @@ void Stop_Sound() {
     } else if (backgroundPlayer.currentIndex >= backgroundPlayer.length && !backgroundPlayer.loopMode) {
         Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
     }
+}
+
+// Fonction pour démarrer l'allumage d'une LED pendant une durée spécifiée
+void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin, uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
+    // Configuration des paramètres du LEDPlayer
+    player->gpio = GPIOx;
+    player->pin = Pin;
+    player->duration = duration;
+    player->counter = 0;
+    player->isActive = 1;
+    player->blinkMode = blinkMode;
+    player->blinkPeriod = blinkPeriod;
+    player->blinkState = 1; // Commencer allumé
+
+    // Allumer la LED immédiatement
+    LL_GPIO_SetOutputPin(GPIOx, Pin);
+}
+
+// Fonction pour arrêter l'allumage d'une LED
+void Stop_LED(LEDPlayer *player) {
+    if (player->isActive) {
+        // Éteindre la LED
+        LL_GPIO_ResetOutputPin(player->gpio, player->pin);
+        player->isActive = 0;
+    }
+}
+
+// Fonction pour mettre à jour l'état des LEDs - appelée au rythme du jeu
+void Update_LEDs() {
+    // Mise à jour de la LED du joueur 1
+    if (led1Player.isActive) {
+        led1Player.counter++;
+
+        // Gestion du clignotement si activé
+        if (led1Player.blinkMode) {
+            if (led1Player.counter % led1Player.blinkPeriod == 0) {
+                // Inverser l'état du clignotement
+                led1Player.blinkState = !led1Player.blinkState;
+
+                if (led1Player.blinkState) {
+                    LL_GPIO_SetOutputPin(led1Player.gpio, led1Player.pin);
+                } else {
+                    LL_GPIO_ResetOutputPin(led1Player.gpio, led1Player.pin);
+                }
+            }
+        }
+
+        // Vérifier si la durée est écoulée
+        if (led1Player.counter >= led1Player.duration) {
+            Stop_LED(&led1Player);
+        }
+    }
+
+    // Mise à jour de la LED du joueur 2 (même logique)
+    if (led2Player.isActive) {
+        led2Player.counter++;
+
+        // Gestion du clignotement si activé
+        if (led2Player.blinkMode) {
+            if (led2Player.counter % led2Player.blinkPeriod == 0) {
+                // Inverser l'état du clignotement
+                led2Player.blinkState = !led2Player.blinkState;
+
+                if (led2Player.blinkState) {
+                    LL_GPIO_SetOutputPin(led2Player.gpio, led2Player.pin);
+                } else {
+                    LL_GPIO_ResetOutputPin(led2Player.gpio, led2Player.pin);
+                }
+            }
+        }
+
+        // Vérifier si la durée est écoulée
+        if (led2Player.counter >= led2Player.duration) {
+            Stop_LED(&led2Player);
+        }
+    }
+}
+
+// Fonction pour allumer la LED de victoire du joueur 1
+void Player1_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
+    Start_LED(&led1Player, LED_GPIO, LED_PIN_P1_VICTORY, duration, blinkMode, blinkPeriod);
+}
+
+// Fonction pour allumer la LED de victoire du joueur 2
+void Player2_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
+    Start_LED(&led2Player, LED_GPIO, LED_PIN_P2_VICTORY, duration, blinkMode, blinkPeriod);
 }
 
 // Fonction pour envoyer toutes les données du jeu à l'IHM

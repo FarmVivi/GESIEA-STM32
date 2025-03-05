@@ -51,6 +51,8 @@ static uint32_t systick = 0;
 #define GAMETICK_PERIOD (SYSTICK_TIME / GAMETICK_FREQ)
 #define MUSICTICK_FREQ 8 // 8Hz (125ms)
 #define MUSICTICK_PERIOD (SYSTICK_TIME / MUSICTICK_FREQ)
+#define LED_BLINK_FREQ 4 // 4Hz (250ms)
+#define LED_BLINK_PERIOD (SYSTICK_TIME / LED_BLINK_FREQ)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -152,6 +154,12 @@ void SysTick_Handler(void)
   if(systick % MUSICTICK_PERIOD == 124)
   {
       Stop_Sound();
+  }
+
+  // Ticks pour les LEDs (4Hz - toutes les 250ms)
+  if(systick % LED_BLINK_PERIOD == 0)
+  {
+      Update_LEDs();
   }
   /* USER CODE END SysTick_IRQn 0 */
 
