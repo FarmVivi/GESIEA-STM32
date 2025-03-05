@@ -1101,15 +1101,16 @@ void Update_Game() {
             return;
         }
         
-        // Repositionner la balle au centre et inverser sa direction
+        // Repositionner la balle au centre
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
 
-        // Inverser la direction horizontale
-        game.ball_dx = -game.ball_dx;
+        // S'assurer que la balle se déplace vers la droite (vers le joueur 2 qui a marqué)
+        if (game.ball_dx < 0) {
+			game.ball_dx = -game.ball_dx; // Inverser la direction si elle était négative
+		}
     }
-    
-    if (game.ball_x + game.ball_size >= game.grid_width) {
+    else if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 marque un point
         game.player1_points++;
         Play_Sound_P1(hit_sound, hit_length);
@@ -1120,7 +1121,7 @@ void Update_Game() {
         if (game.player1_points >= game.max_points) {
             // Fin de partie, le joueur 1 a gagné
             game.status = GAME_STATUS_FINISHED;
-    
+
             // Jouer les mélodies de victoire/défaite en même temps sur les deux buzzers respectifs
             Play_Sound_P1(victory_melody, victory_length);
             Play_Sound_P2(defeat_melody, defeat_length);
@@ -1135,12 +1136,14 @@ void Update_Game() {
             return;
         }    
         
-        // Repositionner la balle au centre et inverser sa direction
+        // Repositionner la balle au centre
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
 
-        // Inverser la direction horizontale
-        game.ball_dx = -game.ball_dx;
+        // S'assurer que la balle se déplace vers la gauche (vers le joueur 1 qui a marqué)
+        if (game.ball_dx > 0) {
+            game.ball_dx = -game.ball_dx; // Inverser la direction si elle était positive
+        }
     }
     
     // Envoyer les données à l'IHM
