@@ -32,140 +32,153 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-// Structure pour une note
+/**
+ * @brief Structure représentant une note musicale.
+ */
 typedef struct {
-    uint32_t frequency;    // Fréquence en Hz
+    uint32_t frequency;    /**< Fréquence en Hz */
 } Note;
 
-// Structure pour gérer une mélodie en lecture non-bloquante
+/**
+ * @brief Structure pour gérer une mélodie en lecture non-bloquante.
+ *
+ * Cette structure permet de jouer des mélodies sans bloquer l'exécution
+ * du programme principal, idéal pour un système temps réel.
+ */
 typedef struct {
-    Note* melody;              // Tableau de notes pour la mélodie
-    size_t length;             // Longueur de la mélodie
-    size_t currentIndex;       // Index de la note en cours
-    uint32_t channels;         // Canaux sur lesquels jouer
-    TIM_TypeDef *timer;        // Timer à utiliser
-    uint8_t isPlaying;         // Indique si une mélodie est en cours
-    uint8_t loopMode;          // Indique si la mélodie doit être jouée en boucle
-    uint32_t currentFrequency; // Fréquence actuellement jouée
-    uint8_t continuePlaying;   // Indique si on doit continuer à jouer sans coupure
+    Note* melody;              /**< Tableau de notes pour la mélodie */
+    size_t length;             /**< Longueur de la mélodie */
+    size_t currentIndex;       /**< Index de la note en cours */
+    uint32_t channels;         /**< Canaux sur lesquels jouer */
+    TIM_TypeDef *timer;        /**< Timer à utiliser */
+    uint8_t isPlaying;         /**< Indique si une mélodie est en cours */
+    uint8_t loopMode;          /**< Indique si la mélodie doit être jouée en boucle */
+    uint32_t currentFrequency; /**< Fréquence actuellement jouée */
+    uint8_t continuePlaying;   /**< Indique si on doit continuer à jouer sans coupure */
 } MelodyPlayer;
 
-// Structure pour la gestion des LED de victoire
+/**
+ * @brief Structure pour la gestion des LED de victoire.
+ *
+ * Permet de gérer l'allumage, l'extinction et le clignotement des LED
+ * pour indiquer les points marqués et la victoire.
+ */
 typedef struct {
-    GPIO_TypeDef *gpio;     // Port GPIO 
-    uint32_t pin;           // Pin de la LED
-    uint32_t duration;      // Durée d'allumage en ticks (4Hz)
-    uint32_t counter;       // Compteur de ticks
-    uint8_t isActive;       // Indique si la LED est active
-    uint8_t blinkMode;      // Indique si la LED doit clignoter
-    uint32_t blinkPeriod;   // Période de clignotement en ticks
-    uint8_t blinkState;     // État actuel du clignotement (1=allumé, 0=éteint)
-    uint8_t infiniteMode;   // Nouveau: mode infini (1=infini, 0=durée limitée)
+    GPIO_TypeDef *gpio;     /**< Port GPIO */
+    uint32_t pin;           /**< Pin de la LED */
+    uint32_t duration;      /**< Durée d'allumage en ticks (4Hz) */
+    uint32_t counter;       /**< Compteur de ticks */
+    uint8_t isActive;       /**< Indique si la LED est active */
+    uint8_t blinkMode;      /**< Indique si la LED doit clignoter */
+    uint32_t blinkPeriod;   /**< Période de clignotement en ticks */
+    uint8_t blinkState;     /**< État actuel du clignotement (1=allumé, 0=éteint) */
+    uint8_t infiniteMode;   /**< Mode infini (1=infini, 0=durée limitée) */
 } LEDPlayer;
 
-// Structure pour le status du jeu
+/**
+ * @brief Structure pour le status du jeu.
+ *
+ * Cette structure contient toutes les données du jeu : positions des raquettes et de la balle,
+ * scores, état du jeu, dimensions du terrain, etc.
+ */
 typedef struct {
-    uint16_t grid_width;
-    uint16_t grid_height;
-    uint16_t ball_x;
-    uint16_t ball_y;
-    int8_t ball_dx;
-    int8_t ball_dy;
-    uint8_t initial_ball_velocity;
-    uint16_t paddle_left_x;
-    uint16_t paddle_left_y;
-    uint16_t paddle_right_x;
-    uint16_t paddle_right_y;
-    uint8_t paddle_left_size;
-    uint8_t paddle_right_size;
-    uint8_t paddle_width;
-    uint8_t ball_size;
-    uint8_t paddle_speed;
-    uint8_t status;
-    uint8_t max_points;
-    uint8_t player1_points;
-    uint8_t player2_points;
-    uint16_t left_zone_width;
-    uint16_t right_zone_width;
-    // Boost
-    uint8_t player1_button_state;      // État actuel du bouton du joueur 1
-    uint8_t player1_prev_button_state; // État précédent du bouton du joueur 1
-    uint8_t player1_boost_ready;       // Indique si le boost du joueur 1 est prêt
-    uint8_t player1_boost_counter;     // Compteur pour le joueur 1
-
-    uint8_t player2_button_state;      // État actuel du bouton du joueur 2
-    uint8_t player2_prev_button_state; // État précédent du bouton du joueur 2
-    uint8_t player2_boost_ready;       // Indique si le boost du joueur 2 est prêt
-    uint8_t player2_boost_counter;     // Compteur pour le joueur 2
-
-    uint8_t boost_window;              // Fenêtre de temps pour le boost (en ticks)
-    uint8_t boost_factor;              // Facteur de boost (en pourcentage)
-
-    uint16_t tick;                      // Compteur de ticks pour le jeu
+    uint16_t grid_width;               /**< Largeur de la grille de jeu */
+    uint16_t grid_height;              /**< Hauteur de la grille de jeu */
+    uint16_t ball_x;                   /**< Position X de la balle */
+    uint16_t ball_y;                   /**< Position Y de la balle */
+    int8_t ball_dx;                    /**< Vitesse horizontale de la balle */
+    int8_t ball_dy;                    /**< Vitesse verticale de la balle */
+    uint8_t initial_ball_velocity;     /**< Vitesse initiale de la balle */
+    uint16_t paddle_left_x;            /**< Position X de la raquette gauche */
+    uint16_t paddle_left_y;            /**< Position Y de la raquette gauche */
+    uint16_t paddle_right_x;           /**< Position X de la raquette droite */
+    uint16_t paddle_right_y;           /**< Position Y de la raquette droite */
+    uint8_t paddle_left_size;          /**< Taille de la raquette gauche */
+    uint8_t paddle_right_size;         /**< Taille de la raquette droite */
+    uint8_t paddle_width;              /**< Largeur des raquettes */
+    uint8_t ball_size;                 /**< Taille de la balle */
+    uint8_t paddle_speed;              /**< Vitesse des raquettes */
+    uint8_t status;                    /**< Statut du jeu (NONE, RUNNING, PAUSED, FINISHED) */
+    uint8_t max_points;                /**< Nombre de points nécessaires pour gagner */
+    uint8_t player1_points;            /**< Points du joueur 1 */
+    uint8_t player2_points;            /**< Points du joueur 2 */
+    uint16_t left_zone_width;          /**< Largeur de la zone du joueur gauche */
+    uint16_t right_zone_width;         /**< Largeur de la zone du joueur droit */
+    uint8_t player1_button_state;      /**< État actuel du bouton du joueur 1 */
+    uint8_t player1_prev_button_state; /**< État précédent du bouton du joueur 1 */
+    uint8_t player1_boost_ready;       /**< Indique si le boost du joueur 1 est prêt */
+    uint8_t player1_boost_counter;     /**< Compteur pour le joueur 1 */
+    uint8_t player2_button_state;      /**< État actuel du bouton du joueur 2 */
+    uint8_t player2_prev_button_state; /**< État précédent du bouton du joueur 2 */
+    uint8_t player2_boost_ready;       /**< Indique si le boost du joueur 2 est prêt */
+    uint8_t player2_boost_counter;     /**< Compteur pour le joueur 2 */
+    uint8_t boost_window;              /**< Fenêtre de temps pour le boost (en ticks) */
+    uint8_t boost_factor;              /**< Facteur de boost (en pourcentage) */
+    uint16_t tick;                     /**< Compteur de ticks pour le jeu */
 } Game;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-// Fréquences des notes (en Hz)
-#define NOTE_G3  196.00  // Sol3
-#define NOTE_GS3 207.65  // Sol#3/La♭3
-#define NOTE_A3  220.00  // La3
-#define NOTE_AS3 233.08  // La#3/Si♭3
-#define NOTE_B3  246.94  // Si3
-#define NOTE_C4  261.63  // Do4
-#define NOTE_CS4 277.18  // Do#4/Ré♭4
-#define NOTE_D4  293.66  // Ré4
-#define NOTE_DS4 311.13  // Ré#4/Mi♭4
-#define NOTE_E4  329.63  // Mi4
-#define NOTE_F4  349.23  // Fa4
-#define NOTE_FS4 369.99  // Fa#4/Sol♭4
-#define NOTE_G4  392.00  // Sol4
-#define NOTE_GS4 415.30  // Sol#4/La♭4
-#define NOTE_A4  440.00  // La4
-#define NOTE_AS4 466.16  // La#4/Si♭4
-#define NOTE_B4  493.88  // Si4
-#define NOTE_C5  523.25  // Do5
-#define NOTE_CS5 554.37  // Do#5/Ré♭5
-#define NOTE_D5  587.33  // Ré5
-#define NOTE_DS5 622.25  // Ré#5/Mi♭5
-#define NOTE_E5  659.25  // Mi5
-#define NOTE_F5  698.46  // Fa5
-#define NOTE_FS5 739.99  // Fa#5/Sol♭5
-#define NOTE_G5  783.99  // Sol5
-#define NOTE_GS5 830.61  // Sol#5/La♭5
-#define NOTE_A5  880.00  // La5
-#define NOTE_AS5 932.33  // La#5/Si♭5
-#define NOTE_B5  987.77  // Si5
-#define NOTE_C6  1046.50 // Do6
-#define NOTE_CS6 1108.73 // Do#6/Ré♭6
-#define NOTE_D6  1174.66 // Ré6
-#define NOTE_DS6 1244.51 // Ré#6/Mi♭6
-#define NOTE_E6  1318.51 // Mi6
+/* Fréquences des notes musicales (en Hz) */
+#define NOTE_G3  196.00  /**< Sol3 */
+#define NOTE_GS3 207.65  /**< Sol#3/La♭3 */
+#define NOTE_A3  220.00  /**< La3 */
+#define NOTE_AS3 233.08  /**< La#3/Si♭3 */
+#define NOTE_B3  246.94  /**< Si3 */
+#define NOTE_C4  261.63  /**< Do4 */
+#define NOTE_CS4 277.18  /**< Do#4/Ré♭4 */
+#define NOTE_D4  293.66  /**< Ré4 */
+#define NOTE_DS4 311.13  /**< Ré#4/Mi♭4 */
+#define NOTE_E4  329.63  /**< Mi4 */
+#define NOTE_F4  349.23  /**< Fa4 */
+#define NOTE_FS4 369.99  /**< Fa#4/Sol♭4 */
+#define NOTE_G4  392.00  /**< Sol4 */
+#define NOTE_GS4 415.30  /**< Sol#4/La♭4 */
+#define NOTE_A4  440.00  /**< La4 */
+#define NOTE_AS4 466.16  /**< La#4/Si♭4 */
+#define NOTE_B4  493.88  /**< Si4 */
+#define NOTE_C5  523.25  /**< Do5 */
+#define NOTE_CS5 554.37  /**< Do#5/Ré♭5 */
+#define NOTE_D5  587.33  /**< Ré5 */
+#define NOTE_DS5 622.25  /**< Ré#5/Mi♭5 */
+#define NOTE_E5  659.25  /**< Mi5 */
+#define NOTE_F5  698.46  /**< Fa5 */
+#define NOTE_FS5 739.99  /**< Fa#5/Sol♭5 */
+#define NOTE_G5  783.99  /**< Sol5 */
+#define NOTE_GS5 830.61  /**< Sol#5/La♭5 */
+#define NOTE_A5  880.00  /**< La5 */
+#define NOTE_AS5 932.33  /**< La#5/Si♭5 */
+#define NOTE_B5  987.77  /**< Si5 */
+#define NOTE_C6  1046.50 /**< Do6 */
+#define NOTE_CS6 1108.73 /**< Do#6/Ré♭6 */
+#define NOTE_D6  1174.66 /**< Ré6 */
+#define NOTE_DS6 1244.51 /**< Ré#6/Mi♭6 */
+#define NOTE_E6  1318.51 /**< Mi6 */
 
-// Status du jeu
-#define GAME_STATUS_NONE 0
-#define GAME_STATUS_RUNNING 1
-#define GAME_STATUS_PAUSED 2
-#define GAME_STATUS_FINISHED 3
+/* Status du jeu */
+#define GAME_STATUS_NONE 0     /**< Aucun jeu en cours */
+#define GAME_STATUS_RUNNING 1  /**< Jeu en cours */
+#define GAME_STATUS_PAUSED 2   /**< Jeu en pause */
+#define GAME_STATUS_FINISHED 3 /**< Jeu terminé */
 
-// Définir les buzzers, boutons et joystick de chaque joystick
-#define MUSIC_TIM TIM22
-#define MUSIC_CHANNEL LL_TIM_CHANNEL_CH1
-#define BUZZER_TIM TIM2
-#define BUZZER_CHANNEL_P1 LL_TIM_CHANNEL_CH3
-#define BUZZER_CHANNEL_P2 LL_TIM_CHANNEL_CH2
-#define LED_GPIO GPIOA
-#define LED_PIN_P1_VICTORY LL_GPIO_PIN_7
-#define LED_PIN_P2_VICTORY LL_GPIO_PIN_9
-#define BUTTON_GPIO GPIOA
-#define BUTTON_PIN_P1 LL_GPIO_PIN_8
-#define BUTTON_PIN_P2 LL_GPIO_PIN_10
-#define JOYSTICK_ADC ADC1
-#define JOYSTICK_X_CHANNEL_P1 LL_ADC_CHANNEL_0
-#define JOYSTICK_Y_CHANNEL_P1 LL_ADC_CHANNEL_1
-#define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_10
-#define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_11
+/* Définitions des broches et périphériques */
+#define MUSIC_TIM TIM22                         /**< Timer pour la musique */
+#define MUSIC_CHANNEL LL_TIM_CHANNEL_CH1        /**< Canal pour la musique */
+#define BUZZER_TIM TIM2                         /**< Timer pour les buzzers des joueurs */
+#define BUZZER_CHANNEL_P1 LL_TIM_CHANNEL_CH3    /**< Canal pour le buzzer du joueur 1 */
+#define BUZZER_CHANNEL_P2 LL_TIM_CHANNEL_CH2    /**< Canal pour le buzzer du joueur 2 */
+#define LED_GPIO GPIOA                          /**< Port GPIO pour les LED */
+#define LED_PIN_P1_VICTORY LL_GPIO_PIN_7        /**< Broche pour la LED de victoire du joueur 1 */
+#define LED_PIN_P2_VICTORY LL_GPIO_PIN_9        /**< Broche pour la LED de victoire du joueur 2 */
+#define BUTTON_GPIO GPIOA                       /**< Port GPIO pour les boutons */
+#define BUTTON_PIN_P1 LL_GPIO_PIN_8             /**< Broche pour le bouton du joueur 1 */
+#define BUTTON_PIN_P2 LL_GPIO_PIN_10            /**< Broche pour le bouton du joueur 2 */
+#define JOYSTICK_ADC ADC1                       /**< ADC pour les joysticks */
+#define JOYSTICK_X_CHANNEL_P1 LL_ADC_CHANNEL_0  /**< Canal pour l'axe X du joystick du joueur 1 */
+#define JOYSTICK_Y_CHANNEL_P1 LL_ADC_CHANNEL_1  /**< Canal pour l'axe Y du joystick du joueur 1 */
+#define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_10 /**< Canal pour l'axe X du joystick du joueur 2 */
+#define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_11 /**< Canal pour l'axe Y du joystick du joueur 2 */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -176,88 +189,78 @@ typedef struct {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// Mélodie de démarrage - plus joyeuse et reconnaissable
+/* Mélodies pour les buzzers et la musique */
 Note init_melody[] = {
     {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
     {NOTE_E5}, {NOTE_E5}, {NOTE_G5}, {NOTE_G5},
     {NOTE_E5}, {NOTE_E5}, {NOTE_C5}, {NOTE_C5}
-};
-size_t init_length = sizeof(init_melody) / sizeof(Note);
+};                                                                          /**< Mélodie de démarrage */
+size_t init_length = sizeof(init_melody) / sizeof(Note);                    /**< Longueur de la mélodie */
 
-// Mélodie de connexion - fanfare plus distincte
 Note connection_melody[] = {
     {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4},
     {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
     {NOTE_G4}, {NOTE_G4}, {NOTE_E4}, {NOTE_E4},
     {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}
-};
-size_t connection_length = sizeof(connection_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de connexion */
+size_t connection_length = sizeof(connection_melody) / sizeof(Note);       /**< Longueur de la mélodie */
 
-// Mélodie de déconnexion - descente plus dramatique
 Note disconnection_melody[] = {
     {NOTE_C5}, {NOTE_C5}, {NOTE_A4}, {NOTE_A4},
     {NOTE_F4}, {NOTE_F4}, {NOTE_D4}, {NOTE_D4},
-    {NOTE_C4}, {NOTE_C4}, {0}, {0}  // Silence à la fin pour effet dramatique
-};
-size_t disconnection_length = sizeof(disconnection_melody) / sizeof(Note);
+    {NOTE_C4}, {NOTE_C4}, {0}, {0}
+};                                                                         /**< Mélodie de déconnexion */
+size_t disconnection_length = sizeof(disconnection_melody) / sizeof(Note); /**< Longueur de la mélodie */
 
-// Mélodie de début de partie - plus excitante et rythmée
 Note game_start_melody[] = {
     {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4},
     {NOTE_A4}, {NOTE_A4}, {NOTE_C5}, {NOTE_C5},
     {NOTE_B4}, {NOTE_A4}, {NOTE_G4}, {NOTE_E4},
     {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5}
-};
-size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de début de jeu */
+size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);       /**< Longueur de la mélodie */
 
-// Mélodie de mise en pause - descente douce
 Note pause_melody[] = {
     {NOTE_E5}, {NOTE_E5}, {NOTE_C5}, {NOTE_C5},
     {NOTE_A4}, {NOTE_A4}, {NOTE_E4}, {NOTE_E4},
-    {NOTE_C4}, {NOTE_C4}, {0}, {0}  // Silence pour indiquer la pause
-};
-size_t pause_length = sizeof(pause_melody) / sizeof(Note);
+    {NOTE_C4}, {NOTE_C4}, {0}, {0}
+};                                                                         /**< Mélodie de pause */
+size_t pause_length = sizeof(pause_melody) / sizeof(Note);                 /**< Longueur de la mélodie */
 
-// Mélodie de reprise - montée énergique
 Note resume_melody[] = {
     {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4},
     {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
     {NOTE_E5}, {NOTE_E5}, {NOTE_G5}, {NOTE_G5}
-};
-size_t resume_length = sizeof(resume_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de reprise */
+size_t resume_length = sizeof(resume_melody) / sizeof(Note);               /**< Longueur de la mélodie */
 
-// Mélodie de touche - plus dynamique mais toujours courte
 Note hit_sound[] = {
     {NOTE_A4}, {NOTE_E5}, {NOTE_A4}, {0}
-};
-size_t hit_length = sizeof(hit_sound) / sizeof(Note);
+};                                                                         /**< Son de collision */
+size_t hit_length = sizeof(hit_sound) / sizeof(Note);                      /**< Longueur du son */
 
-// Mélodie de touche boostée - plus forte et plus aiguë
 Note boost_sound[] = {
     {NOTE_E5}, {NOTE_G5}, {NOTE_C6}, {NOTE_G5}, {NOTE_E6}
-};
-size_t boost_sound_length = sizeof(boost_sound) / sizeof(Note);
+};                                                                         /**< Son de boost */
+size_t boost_sound_length = sizeof(boost_sound) / sizeof(Note);            /**< Longueur du son */
 
-// Mélodie de victoire - fanfare triomphante
 Note victory_melody[] = {
     {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_G4},
     {NOTE_C5}, {NOTE_C5}, {NOTE_E5}, {NOTE_E5},
     {NOTE_G5}, {NOTE_G5}, {NOTE_G5}, {NOTE_G5},
     {NOTE_E5}, {NOTE_C5}, {NOTE_G4}, {NOTE_C5},
     {NOTE_C5}, {NOTE_C5}, {0}, {0}
-};
-size_t victory_length = sizeof(victory_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de victoire */
+size_t victory_length = sizeof(victory_melody) / sizeof(Note);             /**< Longueur de la mélodie */
 
-// Mélodie de défaite - triste et descendante
 Note defeat_melody[] = {
     {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_G4},
     {NOTE_E4}, {NOTE_E4}, {NOTE_C4}, {NOTE_C4},
     {NOTE_B3}, {NOTE_B3}, {NOTE_G3}, {NOTE_G3},
     {NOTE_G3}, {0}, {0}, {0}
-};
-size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de défaite */
+size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);               /**< Longueur de la mélodie */
 
-// Mélodie de fond pour le jeu (boucle) - plus rythmée et variée
 Note background_melody[] = {
     // Partie 1: thème principal
     {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
@@ -274,20 +277,20 @@ Note background_melody[] = {
     // Partie 4: finale
     {NOTE_C5}, {NOTE_C5}, {NOTE_A4}, {NOTE_A4}, {NOTE_F4}, {NOTE_F4}, {NOTE_D4}, {NOTE_D4},
     {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4}
-};
-size_t background_length = sizeof(background_melody) / sizeof(Note);
+};                                                                         /**< Mélodie de fond */
+size_t background_length = sizeof(background_melody) / sizeof(Note);       /**< Longueur de la mélodie */
 
-// Variables globales pour la gestion des mélodies - un player par buzzer
-MelodyPlayer buzzer1Player = {0};
-MelodyPlayer buzzer2Player = {0};
-MelodyPlayer backgroundPlayer = {0};
+/* Variables pour les players de mélodies */
+MelodyPlayer buzzer1Player = {0};    /**< Player pour le buzzer 1 */
+MelodyPlayer buzzer2Player = {0};    /**< Player pour le buzzer 2 */
+MelodyPlayer backgroundPlayer = {0}; /**< Player pour la musique de fond */
 
-// Instances pour les LED de victoire
-LEDPlayer led1Player = {0};
-LEDPlayer led2Player = {0};
+/* Variables pour les players de LED */
+LEDPlayer led1Player = {0}; /**< Player pour la LED de victoire du joueur 1 */
+LEDPlayer led2Player = {0}; /**< Player pour la LED de victoire du joueur 2 */
 
-// Jeu
-Game game =	{0};
+/* Variables pour le jeu */
+Game game =	{0}; /**< Status du jeu */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -298,7 +301,15 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Redirection de printf vers l'UART2
+/**
+ * @brief Redirection de printf vers l'UART2.
+ *
+ * Cette fonction est appelée par les fonctions printf et permet
+ * de rediriger la sortie vers l'UART2.
+ *
+ * @param ch Caractère à envoyer
+ * @return Le caractère envoyé
+ */
 int __io_putchar(int ch) {
     // Attendre que le buffer de transmission soit vide
     while (!LL_USART_IsActiveFlag_TXE(USART2));
@@ -309,7 +320,17 @@ int __io_putchar(int ch) {
     return ch;
 }
 
-// Necessaire pour stdio.h
+/**
+ * @brief Fonction d'écriture pour stdio.h.
+ *
+ * Implémentation de la fonction _write utilisée par stdio.h
+ * pour la sortie standard.
+ *
+ * @param file Descripteur de fichier (non utilisé)
+ * @param ptr Pointeur vers les données à écrire
+ * @param len Longueur des données
+ * @return Nombre d'octets écrits
+ */
 int _write(int file, char *ptr, int len) {
     int i;
     for (i = 0; i < len; i++) {
@@ -318,7 +339,11 @@ int _write(int file, char *ptr, int len) {
     return len;
 }
 
-// Fonction qui génère un nombre pseudo-aléatoire
+/**
+ * @brief Génère un nombre pseudo-aléatoire.
+ *
+ * @return Nombre aléatoire généré
+ */
 uint32_t get_random_number()
 {
 	static uint32_t seed = 0;
@@ -326,13 +351,25 @@ uint32_t get_random_number()
 	return seed;
 }
 
-// Renvoie un nombre aléatoire compris entre min et max (inclus)
+/**
+ * @brief Génère un nombre aléatoire dans une plage donnée.
+ *
+ * @param min Valeur minimale (incluse)
+ * @param max Valeur maximale (incluse)
+ * @return Nombre aléatoire dans la plage [min, max]
+ */
 uint32_t get_random_number_range(uint32_t min, uint32_t max)
 {
     return min + (get_random_number() % (max - min + 1));
 }
 
-// Fonction permettant de lire la valeur numérique depuis une entrée analogique
+/**
+ * @brief Lit une valeur depuis une entrée analogique.
+ *
+ * @param ADCx Périphérique ADC à utiliser
+ * @param Channel Canal ADC à lire
+ * @return Valeur lue (0-4095)
+ */
 uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
 	// Sélectionner le canal
 	LL_ADC_REG_SetSequencerChannels(ADCx, Channel);
@@ -347,7 +384,13 @@ uint16_t Read_ADC_Value(ADC_TypeDef *ADCx, uint32_t Channel) {
 	return value;
 }
 
-// Fonction pour définir la fréquence du buzzer
+/**
+ * @brief Configure la fréquence d'un buzzer.
+ *
+ * @param TIMx Timer à utiliser
+ * @param Channels Canaux du timer à configurer
+ * @param frequency Fréquence en Hz (0 pour désactiver)
+ */
 void Set_Buzzer_Frequency(TIM_TypeDef *TIMx, uint32_t Channels, uint32_t frequency) {
     if (frequency == 0) {
         LL_TIM_CC_DisableChannel(TIMx, Channels);
@@ -373,7 +416,16 @@ void Set_Buzzer_Frequency(TIM_TypeDef *TIMx, uint32_t Channels, uint32_t frequen
 	}
 }
 
-// Fonction pour démarrer une mélodie
+/**
+ * @brief Démarre la lecture d'une mélodie.
+ *
+ * @param player Pointeur vers la structure MelodyPlayer
+ * @param TIMx Timer à utiliser
+ * @param Channels Canaux du timer
+ * @param melody Tableau de notes à jouer
+ * @param length Longueur de la mélodie
+ * @param loop Mode boucle (1=actif, 0=inactif)
+ */
 void Start_Melody(MelodyPlayer *player, TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t length, uint8_t loop) {
     // Si une mélodie est déjà en cours sur ce player, l'arrêter
     if (player->isPlaying) {
@@ -394,7 +446,11 @@ void Start_Melody(MelodyPlayer *player, TIM_TypeDef *TIMx, uint32_t Channels, No
     // La note sera jouée au prochain appel à Update_Sound
 }
 
-// Fonction pour arrêter une mélodie
+/**
+ * @brief Arrête la lecture d'une mélodie.
+ *
+ * @param player Pointeur vers la structure MelodyPlayer
+ */
 void Stop_Melody(MelodyPlayer *player) {
     if (player->isPlaying) {
         Set_Buzzer_Frequency(player->timer, player->channels, 0);
@@ -402,38 +458,67 @@ void Stop_Melody(MelodyPlayer *player) {
     }
 }
 
-// Jouer un son sur le buzzer 1
+/**
+ * @brief Joue un son sur le buzzer du joueur 1.
+ *
+ * @param melody Tableau de notes à jouer
+ * @param length Longueur de la mélodie
+ */
 void Play_Sound_P1(Note* melody, size_t length) {
     Start_Melody(&buzzer1Player, BUZZER_TIM, BUZZER_CHANNEL_P1, melody, length, 0);
 }
 
-// Jouer un son sur le buzzer 2
+/**
+ * @brief Joue un son sur le buzzer du joueur 2.
+ *
+ * @param melody Tableau de notes à jouer
+ * @param length Longueur de la mélodie
+ */
 void Play_Sound_P2(Note* melody, size_t length) {
     Start_Melody(&buzzer2Player, BUZZER_TIM, BUZZER_CHANNEL_P2, melody, length, 0);
 }
 
-// Jouer un son sur les deux buzzers
+/**
+ * @brief Joue un son sur les deux buzzers.
+ *
+ * @param melody Tableau de notes à jouer
+ * @param length Longueur de la mélodie
+ */
 void Play_Sound(Note* melody, size_t length) {
     Play_Sound_P1(melody, length);
     Play_Sound_P2(melody, length);
 }
 
-// Fonction pour démarrer la musique de fond
+/**
+ * @brief Démarre la musique de fond.
+ *
+ * @param melody Tableau de notes à jouer
+ * @param length Longueur de la mélodie
+ */
 void Start_Music(Note* melody, size_t length) {
     Start_Melody(&backgroundPlayer, MUSIC_TIM, MUSIC_CHANNEL, melody, length, 1);
 }
 
-// Fonction pour arrêter la musique de fond
+/**
+ * @brief Arrête la musique de fond.
+ */
 void Stop_Music() {
     Stop_Melody(&backgroundPlayer);
 }
 
-// Fonction pour reprendre la musique de fond
+/**
+ * @brief Reprend la lecture de la musique de fond.
+ */
 void Resume_Music() {
 	backgroundPlayer.isPlaying = 1;
 }
 
-// Fonction pour jouer les sons - appelée toutes les 125ms
+/**
+ * @brief Met à jour les sons - appelée périodiquement.
+ *
+ * Cette fonction est appelée toutes les 125ms par le timer système
+ * pour mettre à jour la lecture des mélodies.
+ */
 void Update_Sound() {
     // Mise à jour du buzzer 1
     if (buzzer1Player.isPlaying) {
@@ -544,7 +629,12 @@ void Update_Sound() {
     }
 }
 
-// Fonction pour arrêter les sons - appelée 25ms après Update_Sound
+/**
+ * @brief Arrête les sons - appelée après Update_Sound.
+ *
+ * Cette fonction est appelée 25ms après Update_Sound pour
+ * couper les sons si nécessaire (gestion de la durée des notes).
+ */
 void Stop_Sound() {
     // Ne couper le son que si on ne doit pas continuer à jouer la même note
     if (buzzer1Player.isPlaying) {
@@ -573,7 +663,17 @@ void Stop_Sound() {
     }
 }
 
-// Fonction pour démarrer l'allumage d'une LED pendant une durée spécifiée
+/**
+ * @brief Démarre l'allumage d'une LED.
+ *
+ * @param player Pointeur vers la structure LEDPlayer
+ * @param GPIOx Port GPIO
+ * @param Pin Broche GPIO
+ * @param duration Durée d'allumage en ticks
+ * @param blinkMode Mode clignotement (1=actif, 0=inactif)
+ * @param blinkPeriod Période de clignotement en ticks
+ * @param infiniteMode Mode infini (1=actif, 0=inactif)
+ */
 void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin,
                uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod,
                uint8_t infiniteMode) {
@@ -592,7 +692,11 @@ void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin,
     LL_GPIO_SetOutputPin(GPIOx, Pin);
 }
 
-// Fonction pour arrêter l'allumage d'une LED
+/**
+ * @brief Arrête l'allumage d'une LED.
+ *
+ * @param player Pointeur vers la structure LEDPlayer
+ */
 void Stop_LED(LEDPlayer *player) {
     if (player->isActive) {
         // Éteindre la LED
@@ -601,7 +705,12 @@ void Stop_LED(LEDPlayer *player) {
     }
 }
 
-// Fonction pour mettre à jour l'état des LEDs
+/**
+ * @brief Met à jour l'état des LED - appelée périodiquement.
+ *
+ * Cette fonction est appelée toutes les 250ms par le timer système
+ * pour mettre à jour l'état des LED.
+ */
 void Update_LEDs() {
     // Mise à jour de la LED du joueur 1
     if (led1Player.isActive) {
@@ -652,22 +761,39 @@ void Update_LEDs() {
     }
 }
 
-// Fonction pour allumer la LED de victoire du joueur 1
+/**
+ * @brief Allume la LED de victoire du joueur 1.
+ *
+ * @param duration Durée d'allumage en ticks
+ * @param blinkMode Mode clignotement (1=actif, 0=inactif)
+ * @param blinkPeriod Période de clignotement en ticks
+ * @param infiniteMode Mode infini (1=actif, 0=inactif)
+ */
 void Player1_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod, uint8_t infiniteMode) {
     Start_LED(&led1Player, LED_GPIO, LED_PIN_P1_VICTORY, duration, blinkMode, blinkPeriod, infiniteMode);
 }
 
-// Fonction pour allumer la LED de victoire du joueur 2
+/**
+ * @brief Allume la LED de victoire du joueur 2.
+ *
+ * @param duration Durée d'allumage en ticks
+ * @param blinkMode Mode clignotement (1=actif, 0=inactif)
+ * @param blinkPeriod Période de clignotement en ticks
+ * @param infiniteMode Mode infini (1=actif, 0=inactif)
+ */
 void Player2_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod, uint8_t infiniteMode) {
     Start_LED(&led2Player, LED_GPIO, LED_PIN_P2_VICTORY, duration, blinkMode, blinkPeriod, infiniteMode);
 }
 
-// Fonction pour envoyer toutes les données du jeu à l'IHM
+/**
+ * @brief Envoie toutes les données du jeu à l'IHM.
+ *
+ * Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,
+ *         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
+ *         paddle_right_x,paddle_right_y,paddle_right_size,max_points,player1_points,player2_points,
+ *         left_zone_width,right_zone_width"
+ */
 void Send_Game_All_Data() {
-    // Format: "game:all:status,grid_width,grid_height,ball_size,ball_x,ball_y,ball_dx,ball_dy,
-    //         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
-    //         paddle_right_x,paddle_right_y,paddle_right_size,max_points,player1_points,player2_points,
-    //         left_zone_width,right_zone_width"
     printf("game:all:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.grid_width, game.grid_height, game.ball_size,
         game.ball_x, game.ball_y, game.ball_dx, game.ball_dy,
@@ -677,11 +803,14 @@ void Send_Game_All_Data() {
         game.left_zone_width, game.right_zone_width);
 }
 
-// Fonction pour envoyer les données de refresh en cours de jeu à l'IHM
+/**
+ * @brief Envoie les données de refresh en cours de jeu à l'IHM.
+ *
+ * Format: "game:run:status,ball_x,ball_y,ball_dx,ball_dy,ball_size,
+ *         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
+ *         paddle_right_x,paddle_right_y,paddle_right_size,p1points,p2points"
+ */
 void Send_Game_Run_Data() {
-    // Format: "game:run:status,ball_x,ball_y,ball_dx,ball_dy,ball_size,
-    //         paddle_left_x,paddle_left_y,paddle_left_size,paddle_width,
-    //         paddle_right_x,paddle_right_y,paddle_right_size,p1points,p2points"
     printf("game:run:%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         game.status, game.ball_x, game.ball_y, game.ball_dx, game.ball_dy, game.ball_size,
         game.paddle_left_x, game.paddle_left_y, game.paddle_left_size, game.paddle_width,
@@ -689,7 +818,17 @@ void Send_Game_Run_Data() {
         game.player1_points, game.player2_points);
 }
 
-// Fonction pour lancer la partie
+/**
+ * @brief Démarre une partie.
+ *
+ * @param width Largeur de la grille
+ * @param height Hauteur de la grille
+ * @param max_points Points nécessaires pour gagner
+ * @param ball_velocity Vitesse de la balle
+ * @param ball_size Taille de la balle
+ * @param paddle_velocity Vitesse des raquettes
+ * @param paddle_size Taille des raquettes
+ */
 void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball_velocity, uint8_t ball_size, uint8_t paddle_velocity, uint8_t paddle_size) {
 	// Initialiser les dimensions de la grille
 	game.grid_width = width;
@@ -785,7 +924,9 @@ void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t bal
 	Start_Music(background_melody, background_length);
 }
 
-// Fonction pour mettre en pause la partie
+/**
+ * @brief Met le jeu en pause.
+ */
 void Pause_Game() {
     game.status = GAME_STATUS_PAUSED;
     LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
@@ -798,7 +939,9 @@ void Pause_Game() {
     Play_Sound(pause_melody, pause_length);
 }
 
-// Fonction pour reprendre la partie
+/**
+ * @brief Reprend le jeu après une pause.
+ */
 void Resume_Game() {
     // Jouer la mélodie de reprise
     Play_Sound(resume_melody, resume_length);
@@ -811,7 +954,9 @@ void Resume_Game() {
     Resume_Music();
 }
 
-// Fonction pour réinitialiser le jeu
+/**
+ * @brief Arrête le jeu.
+ */
 void Stop_Game() {
     // Réinitialiser la LED
     LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
@@ -829,7 +974,12 @@ void Stop_Game() {
     game.status = GAME_STATUS_NONE;
 }
 
-// Fonction pour mettre à jour le jeu (lire les entrées, mettre à jour les positions, gérer victoire/défaite, envoyer les données à l'IHM)
+/**
+ * @brief Met à jour le jeu - appelée périodiquement.
+ *
+ * Cette fonction est appelée toutes les 33ms environ (30Hz) par le timer système.
+ * Elle met à jour la position de la balle, les raquettes, gère les collisions et les scores.
+ */
 void Update_Game() {
 	// Si la partie est en cours
 	if (game.status != GAME_STATUS_RUNNING) {
@@ -968,8 +1118,8 @@ void Update_Game() {
         }
     }
     
-    // Augmenter la vitesse de la balle toutes les 15 secondes (environ 450 ticks à 30Hz)
-    if (game.tick % 450 == 0) {
+    // Augmenter la vitesse de la balle toutes les 10 secondes (environ 300 ticks à 30Hz)
+    if (game.tick % 300 == 0) {
 		if (game.ball_dx > 0) {
 			game.ball_dx++;
 		} else {
@@ -1172,7 +1322,19 @@ void Update_Game() {
     Send_Game_Run_Data();
 }
 
-// Fonction de callback pour les ordres reçues par l'UART
+/**
+ * @brief Callback pour les données reçues sur l'UART.
+ *
+ * Cette fonction traite les commandes reçues sur l'UART:
+ * - echo: Renvoie le message
+ * - game:start: Démarre une partie
+ * - game:pause: Met le jeu en pause
+ * - game:resume: Reprend le jeu
+ * - game:stop: Arrête le jeu
+ *
+ * @param msg Message reçu
+ * @param length Longueur du message
+ */
 void UART_Callback(char* msg, size_t length) {
     if (strncmp(msg, "echo:", 5) == 0) {
         // Renvoyer le message (pour tester)
@@ -1273,7 +1435,13 @@ void UART_Callback(char* msg, size_t length) {
 	}
 }
 
-// Fonction de callback pour le bouton poussoir bleu sur la carte
+/**
+ * @brief Callback pour le bouton bleu de la carte.
+ *
+ * - Si le jeu n'est pas démarré: démarre une partie
+ * - Si le jeu est en cours: met en pause
+ * - Si le jeu est en pause: reprend
+ */
 void Blue_Button_Callback() {
 	// Si la partie n'est pas en cours, démarrer la partie
 	if (game.status == GAME_STATUS_NONE) {
