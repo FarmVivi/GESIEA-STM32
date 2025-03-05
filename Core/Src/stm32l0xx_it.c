@@ -142,15 +142,16 @@ void SysTick_Handler(void)
 	  Update_Game();
   }
 
-  // Ticks pour la musique
-  // Arrêter la note 50ms avant de lire la suivante
-  if(systick % MUSICTICK_PERIOD == MUSICTICK_PERIOD - 5)
-  {
-	  Stop_Play_Melody();
-  }
+  // Ticks pour la musique (4Hz - toutes les 250ms)
   if(systick % MUSICTICK_PERIOD == 0)
   {
-	  Update_Play_Melody();
+      Update_Sound();
+  }
+
+  // Ticks pour arrêter le son (4Hz - toutes les 250ms, avec 50ms de décalage)
+  if(systick % MUSICTICK_PERIOD == 200)
+  {
+      Stop_Sound();
   }
   /* USER CODE END SysTick_IRQn 0 */
 

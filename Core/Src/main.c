@@ -34,9 +34,19 @@
 /* USER CODE BEGIN PTD */
 // Structure pour une note
 typedef struct {
-    uint32_t frequency;
-    uint32_t duration; // en ms
+    uint32_t frequency;    // Fréquence en Hz
 } Note;
+
+// Structure pour gérer une mélodie en lecture non-bloquante
+typedef struct {
+    Note* melody;              // Tableau de notes pour la mélodie
+    size_t length;             // Longueur de la mélodie
+    size_t currentIndex;       // Index de la note en cours
+    uint32_t channels;         // Canaux sur lesquels jouer
+    TIM_TypeDef *timer;        // Timer à utiliser
+    uint8_t isPlaying;         // Indique si une mélodie est en cours
+    uint8_t loopMode;          // Indique si la mélodie doit être jouée en boucle
+} MelodyPlayer;
 
 // Structure pour le status du jeu
 typedef struct {
@@ -117,69 +127,71 @@ typedef struct {
 /* USER CODE BEGIN PV */
 // Mélodie de démarrage
 Note init_melody[] = {
-    {NOTE_G4, 200}, {NOTE_A4, 200}, {NOTE_B4, 200}, {NOTE_C5, 400}
+    {NOTE_G4}, {NOTE_A4}, {NOTE_B4}, {NOTE_C5}
 };
 size_t init_length = sizeof(init_melody) / sizeof(Note);
 
 // Mélodie de connexion
 Note connection_melody[] = {
-    {NOTE_C4, 100}, {NOTE_E4, 100}, {NOTE_G4, 100}, {NOTE_C5, 100}, {NOTE_G4, 100}, {NOTE_E4, 100}
+    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4}
 };
 size_t connection_length = sizeof(connection_melody) / sizeof(Note);
 
 // Mélodie de déconnexion
 Note disconnection_melody[] = {
-    {NOTE_C5, 100}, {NOTE_G4, 100}, {NOTE_E4, 100}, {NOTE_C4, 200}
+    {NOTE_C5}, {NOTE_G4}, {NOTE_E4}, {NOTE_C4}
 };
 size_t disconnection_length = sizeof(disconnection_melody) / sizeof(Note);
 
 // Mélodie de début de partie
 Note game_start_melody[] = {
-    {NOTE_E4, 150}, {NOTE_F4, 150}, {NOTE_G4, 150},
-    {NOTE_A4, 150}, {NOTE_B4, 150}, {NOTE_C5, 300}
+    {NOTE_E4}, {NOTE_F4}, {NOTE_G4},
+    {NOTE_A4}, {NOTE_B4}, {NOTE_C5}
 };
 size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);
 
 // Mélodie de mise en pause
 Note pause_melody[] = {
-    {NOTE_C5, 100}, {NOTE_A4, 100}, {NOTE_F4, 100}, {NOTE_D4, 200}
+    {NOTE_C5}, {NOTE_A4}, {NOTE_F4}, {NOTE_D4}
 };
 size_t pause_length = sizeof(pause_melody) / sizeof(Note);
 
 // Mélodie de reprise
 Note resume_melody[] = {
-    {NOTE_D4, 100}, {NOTE_F4, 100}, {NOTE_A4, 100}, {NOTE_C5, 200}
+    {NOTE_D4}, {NOTE_F4}, {NOTE_A4}, {NOTE_C5}
 };
 size_t resume_length = sizeof(resume_melody) / sizeof(Note);
 
 // Mélodie de touche
 Note pong_hit_sound[] = {
-    {NOTE_E4, 100}, {NOTE_G4, 100}
+    {NOTE_E4}, {NOTE_G4}
 };
 size_t pong_hit_length = sizeof(pong_hit_sound) / sizeof(Note);
 
 // Mélodie de victoire
 Note victory_melody[] = {
-    {NOTE_C4, 200}, {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_C5, 400}
+    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}
 };
 size_t victory_length = sizeof(victory_melody) / sizeof(Note);
 
 // Mélodie de défaite
 Note defeat_melody[] = {
-    {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200}, {NOTE_C4, 400}
+    {NOTE_C5}, {NOTE_G4}, {NOTE_E4}, {NOTE_C4}
 };
 size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
 
 // Mélodie de fond pour le jeu (boucle)
 Note background_melody[] = {
-    {NOTE_C4, 200}, {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_C5, 200}, {NOTE_G4, 200}, {NOTE_E4, 200},
-    {NOTE_D4, 200}, {NOTE_F4, 200}, {NOTE_A4, 200}, {NOTE_D5, 200}, {NOTE_A4, 200}, {NOTE_F4, 200},
-    {NOTE_E4, 200}, {NOTE_G4, 200}, {NOTE_B4, 200}, {NOTE_E5, 200}, {NOTE_B4, 200}, {NOTE_G4, 200}
+    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4},
+    {NOTE_D4}, {NOTE_F4}, {NOTE_A4}, {NOTE_D5}, {NOTE_A4}, {NOTE_F4},
+    {NOTE_E4}, {NOTE_G4}, {NOTE_B4}, {NOTE_E5}, {NOTE_B4}, {NOTE_G4}
 };
 size_t background_length = sizeof(background_melody) / sizeof(Note);
 
-// Index de la mélodie de fond
-size_t background_index = 0;
+// Variables globales pour la gestion des mélodies - un player par buzzer
+MelodyPlayer buzzer1Player = {0};      // Pour le buzzer du joueur 1
+MelodyPlayer buzzer2Player = {0};      // Pour le buzzer du joueur 2
+MelodyPlayer backgroundPlayer = {0};   // Pour la musique de fond
 
 // Jeu
 Game game =	{
@@ -290,18 +302,155 @@ void Set_Buzzer_Frequency(TIM_TypeDef *TIMx, uint32_t Channels, uint32_t frequen
 	}
 }
 
-// Fonction pour jouer une note
-void Play_Note(TIM_TypeDef *TIMx, uint32_t Channels, Note note) {
-    Set_Buzzer_Frequency(TIMx, Channels, note.frequency);
-    LL_mDelay(note.duration);
-    Set_Buzzer_Frequency(TIMx, Channels, 0); // Arrêter le son
-    LL_mDelay(50); // Pause entre les notes
+// Fonction pour démarrer une mélodie
+void Start_Melody(MelodyPlayer *player, TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t length, uint8_t loop) {
+    // Si une mélodie est déjà en cours sur ce player, l'arrêter
+    if (player->isPlaying) {
+        Set_Buzzer_Frequency(player->timer, player->channels, 0);
+    }
+    
+    // Configurer la nouvelle mélodie
+    player->melody = melody;
+    player->length = length;
+    player->currentIndex = 0;
+    player->channels = Channels;
+    player->timer = TIMx;
+    player->isPlaying = 1;
+    player->loopMode = loop;
+    
+    // La note sera jouée au prochain appel à Update_Sound
 }
 
-// Fonction pour jouer une mélodie
-void Play_Melody(TIM_TypeDef *TIMx, uint32_t Channels, Note* melody, size_t length) {
-    for (size_t i = 0; i < length; i++) {
-        Play_Note(TIMx, Channels, melody[i]);
+// Fonction pour arrêter une mélodie
+void Stop_Melody(MelodyPlayer *player) {
+    if (player->isPlaying) {
+        Set_Buzzer_Frequency(player->timer, player->channels, 0);
+        player->isPlaying = 0;
+    }
+}
+
+// Jouer un son sur le buzzer 1
+void Play_Sound_P1(Note* melody, size_t length) {
+    Start_Melody(&buzzer1Player, BUZZER_TIM, BUZZER_CHANNEL_P1, melody, length, 0);
+}
+
+// Jouer un son sur le buzzer 2
+void Play_Sound_P2(Note* melody, size_t length) {
+    Start_Melody(&buzzer2Player, BUZZER_TIM, BUZZER_CHANNEL_P2, melody, length, 0);
+}
+
+// Jouer un son sur les deux buzzers
+void Play_Sound(Note* melody, size_t length) {
+    Play_Sound_P1(melody, length);
+    Play_Sound_P2(melody, length);
+}
+
+// Fonction pour démarrer la musique de fond
+void Start_Music(Note* melody, size_t length) {
+    Start_Melody(&backgroundPlayer, MUSIC_TIM, MUSIC_CHANNEL, melody, length, 1);
+}
+
+// Fonction pour arrêter la musique de fond
+void Stop_Music() {
+    Stop_Melody(&backgroundPlayer);
+}
+
+// Fonction pour reprendre la musique de fond
+void Resume_Music() {
+	backgroundPlayer.isPlaying = 1;
+}
+
+// Fonction pour jouer les sons - appelée toutes les 250ms
+void Update_Sound() {
+    // Mise à jour du buzzer 1
+    if (buzzer1Player.isPlaying) {
+        // Jouer la note actuelle
+        if (buzzer1Player.currentIndex < buzzer1Player.length) {
+            Note currentNote = buzzer1Player.melody[buzzer1Player.currentIndex];
+            Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, currentNote.frequency);
+            buzzer1Player.currentIndex++;
+
+            // Vérifier si nous avons atteint la fin de la mélodie
+            if (buzzer1Player.currentIndex >= buzzer1Player.length) {
+                if (!buzzer1Player.loopMode) {
+                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
+                    buzzer1Player.isPlaying = 0;
+                    // La note sera arrêtée par Stop_Sound()
+                } else {
+                    // Boucler au début
+                    buzzer1Player.currentIndex = 0;
+                }
+            }
+        }
+    }
+
+    // Mise à jour du buzzer 2
+    if (buzzer2Player.isPlaying) {
+        // Jouer la note actuelle
+        if (buzzer2Player.currentIndex < buzzer2Player.length) {
+            Note currentNote = buzzer2Player.melody[buzzer2Player.currentIndex];
+            Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, currentNote.frequency);
+            buzzer2Player.currentIndex++;
+            
+            // Vérifier si nous avons atteint la fin de la mélodie
+            if (buzzer2Player.currentIndex >= buzzer2Player.length) {
+                if (!buzzer2Player.loopMode) {
+                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
+                    buzzer2Player.isPlaying = 0;
+                    // La note sera arrêtée par Stop_Sound()
+                } else {
+                    // Boucler au début
+                    buzzer2Player.currentIndex = 0;
+                }
+            }
+        }
+    }
+
+    // Mise à jour de la musique de fond
+    if (backgroundPlayer.isPlaying) {
+        // Jouer la note actuelle de la musique de fond
+        if (backgroundPlayer.currentIndex < backgroundPlayer.length) {
+            Note currentNote = backgroundPlayer.melody[backgroundPlayer.currentIndex];
+            Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, currentNote.frequency);
+            backgroundPlayer.currentIndex++;
+            
+            // Vérifier si nous avons atteint la fin de la mélodie
+            if (backgroundPlayer.currentIndex >= backgroundPlayer.length) {
+                if (backgroundPlayer.loopMode) {
+                    // Boucler au début
+                    backgroundPlayer.currentIndex = 0;
+                } else {
+                    // Marquer comme terminé et arrêter le son immédiatement pour la dernière note
+                    backgroundPlayer.isPlaying = 0;
+                    // La note sera arrêtée par Stop_Sound()
+                }
+            }
+        }
+    }
+}
+
+// Fonction pour arrêter les sons - appelée 50ms après Update_Sound
+void Stop_Sound() {
+    // Arrêter les notes courantes pour créer une pause entre les notes
+    if (buzzer1Player.isPlaying) {
+        Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, 0);
+    } else if (buzzer1Player.currentIndex >= buzzer1Player.length && !buzzer1Player.loopMode) {
+        // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
+        Set_Buzzer_Frequency(buzzer1Player.timer, buzzer1Player.channels, 0);
+    }
+
+    if (buzzer2Player.isPlaying) {
+        Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, 0);
+    } else if (buzzer2Player.currentIndex >= buzzer2Player.length && !buzzer2Player.loopMode) {
+        // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
+        Set_Buzzer_Frequency(buzzer2Player.timer, buzzer2Player.channels, 0);
+    }
+
+    if (backgroundPlayer.isPlaying) {
+        Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
+    } else if (backgroundPlayer.currentIndex >= backgroundPlayer.length && !backgroundPlayer.loopMode) {
+        // Si la mélodie vient de se terminer, s'assurer que le son est arrêté
+        Set_Buzzer_Frequency(backgroundPlayer.timer, backgroundPlayer.channels, 0);
     }
 }
 
@@ -330,21 +479,6 @@ void Send_Game_Run_Data() {
         game.paddle_left_x, game.paddle_left_y, game.paddle_left_size, game.paddle_width,
         game.paddle_right_x, game.paddle_right_y, game.paddle_right_size,
         game.player1_points, game.player2_points);
-}
-
-// Fonction pour arrêter la mélodie de fond
-void Stop_Play_Melody() {
-	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, 0);
-}
-
-// Fonction pour mettre à jour la mélodie de fond
-void Update_Play_Melody() {
-	// Récupérer la note
-	Note note = background_melody[background_index];
-	// Jouer la note suivante (sans pause)
-	Set_Buzzer_Frequency(MUSIC_TIM, MUSIC_CHANNEL, note.frequency);
-	// Incrémenter l'index
-	background_index = (background_index + 1) % background_length;
 }
 
 // Fonction pour initialiser le jeu Pong
@@ -408,7 +542,7 @@ void Init_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t ball
 // Fonction pour lancer la partie
 void Start_Game() {
     // Jouer la mélodie de démarrage
-    Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, game_start_melody, game_start_length);
+    Play_Sound(game_start_melody, game_start_length);
     
     // Définir le statut à "running"
     game.status = GAME_STATUS_RUNNING;
@@ -419,26 +553,34 @@ void Start_Game() {
     // Envoyer les données du jeu à l'IHM
     Send_Game_All_Data();
     
-    // Démarrer la musique de fond
-    background_index = 0;
-    Update_Play_Melody();
+    // Démarrer la musique de fond en boucle
+    Start_Music(background_melody, background_length);
 }
 
 // Fonction pour mettre en pause la partie
 void Pause_Game() {
-	game.status = GAME_STATUS_PAUSED;
-	LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	Send_Game_All_Data();
-	Stop_Play_Melody();
-	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pause_melody, pause_length);
+    game.status = GAME_STATUS_PAUSED;
+    LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
+    Send_Game_All_Data();
+
+    // Mettre en pause la musique de fond
+    Stop_Music();
+
+    // Jouer la mélodie de pause
+    Play_Sound(pause_melody, pause_length);
 }
 
 // Fonction pour reprendre la partie
 void Resume_Game() {
-	Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, resume_melody, resume_length);
-	game.status = GAME_STATUS_RUNNING;
+    // Jouer la mélodie de reprise
+    Play_Sound(resume_melody, resume_length);
+
+    game.status = GAME_STATUS_RUNNING;
     LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
-	Send_Game_All_Data();
+    Send_Game_All_Data();
+
+    // Reprendre la musique de fond
+    Resume_Music();
 }
 
 // Fonction pour réinitialiser le jeu
@@ -447,13 +589,13 @@ void Stop_Game() {
     LL_GPIO_ResetOutputPin(LD2_GPIO_Port, LD2_Pin);
 
     // Arrêter la musique de fond
-    Stop_Play_Melody();
+    Stop_Music();
 
     // Envoyer les données à l'IHM pour actualiser l'affichage
     Send_Game_All_Data();
 
     // Jouer la mélodie de fin de partie
-    Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, disconnection_melody, disconnection_length);
+    Play_Sound(disconnection_melody, disconnection_length);
 
     // Réinitialiser le jeu avec les valeurs actuelles
     Init_Game(game.grid_width, game.grid_height, 5, 1, 3, 5, 6);
@@ -554,7 +696,7 @@ void Update_Game() {
     // Gestion des collisions avec les bords supérieur et inférieur
     if (game.ball_y <= 0 || game.ball_y + game.ball_size >= game.grid_height) {
         game.ball_dy = -game.ball_dy; // Inverser la direction verticale
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+        Play_Sound(pong_hit_sound, pong_hit_length);
     }
     
     // Gestion des collisions avec les raquettes
@@ -571,8 +713,8 @@ void Update_Game() {
         // Repositionner la balle juste après la raquette pour éviter les collisions multiples
         game.ball_x = game.paddle_left_x + game.paddle_width;
         
-        // Jouer le son de collision
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
+        // Jouer le son de collision sur le buzzer du joueur 1
+        Play_Sound_P1(pong_hit_sound, pong_hit_length);
     }
     
     // Collision avec la raquette droite
@@ -587,22 +729,24 @@ void Update_Game() {
         // Repositionner la balle juste avant la raquette pour éviter les collisions multiples
         game.ball_x = game.paddle_right_x - game.ball_size;
         
-        // Jouer le son de collision
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+        // Jouer le son de collision sur le buzzer du joueur 2
+        Play_Sound_P2(pong_hit_sound, pong_hit_length);
     }
     
     // Gestion des conditions de score
     if (game.ball_x <= 0) {
         // Joueur 2 marque un point
         game.player2_points++;
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, pong_hit_sound, pong_hit_length);
+        Play_Sound_P2(pong_hit_sound, pong_hit_length);
         
         // Vérifier si le joueur 2 a gagné la partie
         if (game.player2_points >= game.max_points) {
             // Fin de partie, le joueur 2 a gagné
             game.status = GAME_STATUS_FINISHED;
-            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, victory_melody, victory_length);
-            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, defeat_melody, defeat_length);
+
+            // Jouer les mélodies de victoire/défaite en même temps sur les deux buzzers respectifs
+            Play_Sound_P2(victory_melody, victory_length);
+            Play_Sound_P1(defeat_melody, defeat_length);
             
             // Arrêter le jeu
             Stop_Game();
@@ -628,14 +772,16 @@ void Update_Game() {
     if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 marque un point
         game.player1_points++;
-        Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, pong_hit_sound, pong_hit_length);
+        Play_Sound_P1(pong_hit_sound, pong_hit_length);
         
         // Vérifier si le joueur 1 a gagné la partie
         if (game.player1_points >= game.max_points) {
             // Fin de partie, le joueur 1 a gagné
             game.status = GAME_STATUS_FINISHED;
-            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1, victory_melody, victory_length);
-            Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P2, defeat_melody, defeat_length);
+
+            // Jouer les mélodies de victoire/défaite en même temps sur les deux buzzers respectifs
+            Play_Sound_P1(victory_melody, victory_length);
+            Play_Sound_P2(defeat_melody, defeat_length);
             
             // Arrêter le jeu
             Stop_Game();
@@ -664,91 +810,9 @@ void Update_Game() {
 
 // Fonction de callback pour les ordres reçues par l'UART
 void UART_Callback(char* msg, size_t length) {
-    uint32_t buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
-    char* colon_pos = strchr(msg, ':');
-
-    // Vérifier s'il y a un troisième argument (sélection du buzzer)
-    if (colon_pos) {
-        char* third_arg = strchr(colon_pos + 1, ':');
-        if (third_arg) {
-            // Convertir le troisième argument en entier
-            int buzzer_select = atoi(third_arg + 1);
-            switch (buzzer_select) {
-                case 1:
-                    buzzer_channels = BUZZER_CHANNEL_P1;
-                    break;
-                case 2:
-                    buzzer_channels = BUZZER_CHANNEL_P2;
-                    break;
-                default:
-                    // Si argument invalide, utiliser les deux buzzers
-                    buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
-                    break;
-            }
-        }
-    }
-
-    // Commandes avec sélection de buzzer possible
-    if (strncmp(msg, "play:connect", 12) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, connection_melody, connection_length);
-    }
-    else if (strncmp(msg, "play:disconnect", 15) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, disconnection_melody, disconnection_length);
-    }
-    else if (strncmp(msg, "play:gamestart", 14) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, game_start_melody, game_start_length);
-    }
-    else if (strncmp(msg, "play:pause", 10) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, pause_melody, pause_length);
-    }
-    else if (strncmp(msg, "play:resume", 11) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, resume_melody, resume_length);
-    }
-    else if (strncmp(msg, "play:hit", 8) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, pong_hit_sound, pong_hit_length);
-    }
-    else if (strncmp(msg, "play:victory", 12) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, victory_melody, victory_length);
-    }
-    else if (strncmp(msg, "play:defeat", 11) == 0) {
-        Play_Melody(BUZZER_TIM, buzzer_channels, defeat_melody, defeat_length);
-    }
-    else if (strncmp(msg, "echo:", 5) == 0) {
+    if (strncmp(msg, "echo:", 5) == 0) {
         // Renvoyer le message (pour tester)
         printf("%s\r\n", msg + 5);
-    }
-    else if (strncmp(msg, "beep:", 5) == 0) {
-        // Formats:
-        // "beep:duration" - utilise les deux buzzers
-        // "beep:duration:1" - utilise le buzzer 1
-        // "beep:duration:2" - utilise le buzzer 2
-        char* duration_str = msg + 5;
-        uint32_t duration = atoi(duration_str);
-
-        // Vérifier et ajuster duration si un troisième argument existe
-        char* third_arg = strchr(duration_str, ':');
-        if (third_arg) {
-            duration = atoi(duration_str);
-            int buzzer_select = atoi(third_arg + 1);
-
-            switch (buzzer_select) {
-                case 1:
-                    buzzer_channels = BUZZER_CHANNEL_P1;
-                    break;
-                case 2:
-                    buzzer_channels = BUZZER_CHANNEL_P2;
-                    break;
-                default:
-                    buzzer_channels = BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2;
-                    break;
-            }
-        }
-
-        if (duration > 0 && duration < 5000) {  // Limiter à 5 secondes
-            Set_Buzzer_Frequency(BUZZER_TIM, buzzer_channels, 1000);  // Fréquence fixe de 1000Hz
-            LL_mDelay(duration);
-            Set_Buzzer_Frequency(BUZZER_TIM, buzzer_channels, 0);  // Arrêter le son
-        }
     }
     else if (strncmp(msg, "game:start", 10) == 0) {
         // Format mis à jour: game:start:width:height:points:vb:sb:vp:sp:leftzone:rightzone
@@ -926,17 +990,6 @@ int main(void)
   printf("  game:pause       - Pause the game\r\n");
   printf("  game:resume      - Resume the game\r\n");
   printf("  game:stop        - Stop the game\r\n");
-  printf("  play:connect     - Play connection melody\r\n");
-  printf("  play:disconnect  - Play disconnection melody\r\n");
-  printf("  play:gamestart   - Play game start melody\r\n");
-  printf("  play:pause       - Play pause melody\r\n");
-  printf("  play:resume      - Play resume melody\r\n");
-  printf("  play:hit         - Play hit sound\r\n");
-  printf("  play:hit:buzz    - Play hit sound using buzzer (1 or 2)\r\n");
-  printf("  play:victory     - Play victory melody\r\n");
-  printf("  play:defeat      - Play defeat melody\r\n");
-  printf("  beep:dura        - Beep for duration (ms)\r\n");
-  printf("  beep:dura:buzz   - Beep for duration (ms) using buzzer (1 or 2)\r\n");
   printf("  echo:message     - Echo back message\r\n");
   printf("-------------------------------------\r\n\r\n");
 
@@ -944,7 +997,7 @@ int main(void)
   LL_SYSTICK_EnableIT();
 
   // Jouer la mélodie de démarrage
-  Play_Melody(BUZZER_TIM, BUZZER_CHANNEL_P1 | BUZZER_CHANNEL_P2, init_melody, init_length);
+  Play_Sound(init_melody, init_length);
   /* USER CODE END 2 */
 
   /* Infinite loop */
