@@ -54,12 +54,13 @@ typedef struct {
 typedef struct {
     GPIO_TypeDef *gpio;     // Port GPIO 
     uint32_t pin;           // Pin de la LED
-    uint32_t duration;      // Durée d'allumage en ticks (30Hz)
+    uint32_t duration;      // Durée d'allumage en ticks (4Hz)
     uint32_t counter;       // Compteur de ticks
     uint8_t isActive;       // Indique si la LED est active
     uint8_t blinkMode;      // Indique si la LED doit clignoter
     uint32_t blinkPeriod;   // Période de clignotement en ticks
     uint8_t blinkState;     // État actuel du clignotement (1=allumé, 0=éteint)
+    uint8_t infiniteMode;   // Nouveau: mode infini (1=infini, 0=durée limitée)
 } LEDPlayer;
 
 // Structure pour le status du jeu
@@ -570,7 +571,9 @@ void Stop_Sound() {
 }
 
 // Fonction pour démarrer l'allumage d'une LED pendant une durée spécifiée
-void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin, uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
+void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin,
+               uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod,
+               uint8_t infiniteMode) {
     // Configuration des paramètres du LEDPlayer
     player->gpio = GPIOx;
     player->pin = Pin;
@@ -580,6 +583,7 @@ void Start_LED(LEDPlayer *player, GPIO_TypeDef *GPIOx, uint32_t Pin, uint32_t du
     player->blinkMode = blinkMode;
     player->blinkPeriod = blinkPeriod;
     player->blinkState = 1; // Commencer allumé
+    player->infiniteMode = infiniteMode; // Nouveau paramètre
 
     // Allumer la LED immédiatement
     LL_GPIO_SetOutputPin(GPIOx, Pin);
@@ -594,7 +598,7 @@ void Stop_LED(LEDPlayer *player) {
     }
 }
 
-// Fonction pour mettre à jour l'état des LEDs - appelée au rythme du jeu
+// Fonction pour mettre à jour l'état des LEDs
 void Update_LEDs() {
     // Mise à jour de la LED du joueur 1
     if (led1Player.isActive) {
@@ -614,8 +618,8 @@ void Update_LEDs() {
             }
         }
 
-        // Vérifier si la durée est écoulée
-        if (led1Player.counter >= led1Player.duration) {
+        // Vérifier si la durée est écoulée (sauf en mode infini)
+        if (!led1Player.infiniteMode && led1Player.counter >= led1Player.duration) {
             Stop_LED(&led1Player);
         }
     }
@@ -638,21 +642,21 @@ void Update_LEDs() {
             }
         }
 
-        // Vérifier si la durée est écoulée
-        if (led2Player.counter >= led2Player.duration) {
+        // Vérifier si la durée est écoulée (sauf en mode infini)
+        if (!led2Player.infiniteMode && led2Player.counter >= led2Player.duration) {
             Stop_LED(&led2Player);
         }
     }
 }
 
 // Fonction pour allumer la LED de victoire du joueur 1
-void Player1_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
-    Start_LED(&led1Player, LED_GPIO, LED_PIN_P1_VICTORY, duration, blinkMode, blinkPeriod);
+void Player1_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod, uint8_t infiniteMode) {
+    Start_LED(&led1Player, LED_GPIO, LED_PIN_P1_VICTORY, duration, blinkMode, blinkPeriod, infiniteMode);
 }
 
 // Fonction pour allumer la LED de victoire du joueur 2
-void Player2_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod) {
-    Start_LED(&led2Player, LED_GPIO, LED_PIN_P2_VICTORY, duration, blinkMode, blinkPeriod);
+void Player2_Victory_LED(uint32_t duration, uint8_t blinkMode, uint32_t blinkPeriod, uint8_t infiniteMode) {
+    Start_LED(&led2Player, LED_GPIO, LED_PIN_P2_VICTORY, duration, blinkMode, blinkPeriod, infiniteMode);
 }
 
 // Fonction pour envoyer toutes les données du jeu à l'IHM
@@ -836,11 +840,15 @@ void Update_Game() {
     if (game.player1_button_state && !game.player1_prev_button_state) {
         game.player1_boost_ready = 1;
         game.player1_boost_counter = 0;
+        // Si le boost est prêt, allumer la LED du joueur 1
+        Player1_Victory_LED(2, 1, 1, 0); // 2 ticks, clignotement rapide, non infini
     }
 
     if (game.player2_button_state && !game.player2_prev_button_state) {
         game.player2_boost_ready = 1;
         game.player2_boost_counter = 0;
+        // Si le boost est prêt, allumer la LED du joueur 2
+        Player2_Victory_LED(2, 1, 1, 0); // 2 ticks, clignotement rapide, non infini
     }
 
     // Incrémenter les compteurs et désactiver le boost s'il expire
@@ -848,6 +856,8 @@ void Update_Game() {
         game.player1_boost_counter++;
         if (game.player1_boost_counter > game.boost_window) {
             game.player1_boost_ready = 0;
+            // Éteindre la LED du joueur 1
+            Stop_LED(&led1Player);
         }
     }
 
@@ -855,6 +865,8 @@ void Update_Game() {
         game.player2_boost_counter++;
         if (game.player2_boost_counter > game.boost_window) {
             game.player2_boost_ready = 0;
+            // Éteindre la LED du joueur 2
+            Stop_LED(&led2Player);
         }
     }
 
@@ -981,6 +993,9 @@ void Update_Game() {
 
             // Jouer le son de boost
             Play_Sound_P1(boost_sound, boost_sound_length);
+
+            // Allumer la LED du joueur 1
+            Player1_Victory_LED(4, 1, 1, 0); // 4 ticks, clignotement rapide, non infini
         } else {
             // Son normal de collision
             Play_Sound_P1(hit_sound, hit_length);
@@ -1020,6 +1035,9 @@ void Update_Game() {
 
             // Jouer le son de boost
             Play_Sound_P2(boost_sound, boost_sound_length);
+
+            // Allumer la LED du joueur 2
+            Player2_Victory_LED(4, 1, 1, 0); // 4 ticks, clignotement rapide, non infini
         } else {
             // Son normal de collision
             Play_Sound_P2(hit_sound, hit_length);
@@ -1035,6 +1053,8 @@ void Update_Game() {
         game.player2_points++;
         Play_Sound_P2(hit_sound, hit_length);
         
+        Player2_Victory_LED(4, 0, 0, 0); // 4 ticks (1s), pas de clignotement, non infini
+
         // Vérifier si le joueur 2 a gagné la partie
         if (game.player2_points >= game.max_points) {
             // Fin de partie, le joueur 2 a gagné
@@ -1044,6 +1064,8 @@ void Update_Game() {
             Play_Sound_P2(victory_melody, victory_length);
             Play_Sound_P1(defeat_melody, defeat_length);
             
+            Player2_Victory_LED(0, 1, 2, 1); // Durée ignorée, clignotement avec période=2, mode infini
+
             // Envoyer les données du jeu pour actualiser l'affichage avant de l'arrêter
             Send_Game_Run_Data();
             
@@ -1073,6 +1095,8 @@ void Update_Game() {
         game.player1_points++;
         Play_Sound_P1(hit_sound, hit_length);
         
+        Player1_Victory_LED(4, 0, 0, 0); // 4 ticks (1s), pas de clignotement, non infini
+
         // Vérifier si le joueur 1 a gagné la partie
         if (game.player1_points >= game.max_points) {
             // Fin de partie, le joueur 1 a gagné
@@ -1082,6 +1106,8 @@ void Update_Game() {
             Play_Sound_P1(victory_melody, victory_length);
             Play_Sound_P2(defeat_melody, defeat_length);
             
+            Player1_Victory_LED(0, 1, 2, 1); // Durée ignorée, clignotement avec période=2, mode infini
+
             // Envoyer les données du jeu pour actualiser l'affichage avant de l'arrêter
             Send_Game_Run_Data();
             
