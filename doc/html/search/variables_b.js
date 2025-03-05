@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['paddle_5fleft_5fsize_0',['paddle_left_size',['../struct_game.html#a5261746b534ff51956f551d9d3d93c34',1,'Game']]],
+  ['paddle_5fleft_5fx_1',['paddle_left_x',['../struct_game.html#a387d8b575505ac8d68f3625046834d5b',1,'Game']]],
+  ['paddle_5fleft_5fy_2',['paddle_left_y',['../struct_game.html#a82116bc8bc61ec29f36f7195e01fbf74',1,'Game']]],
+  ['paddle_5fright_5fsize_3',['paddle_right_size',['../struct_game.html#a4dd9f1ab2c3fc46aaecc986aa95c1cde',1,'Game']]],
+  ['paddle_5fright_5fx_4',['paddle_right_x',['../struct_game.html#ad95617f5390faf83aa4ec332b106497f',1,'Game']]],
+  ['paddle_5fright_5fy_5',['paddle_right_y',['../struct_game.html#a624262a071af700d017bdad79ba42a84',1,'Game']]],
+  ['paddle_5fspeed_6',['paddle_speed',['../struct_game.html#ae00c55845f247a70dd86191047493b13',1,'Game']]],
+  ['paddle_5fwidth_7',['paddle_width',['../struct_game.html#ae2f3b4c0c7d94643fccfcb5b09ea4a55',1,'Game']]],
+  ['pause_5flength_8',['pause_length',['../main_8c.html#a042d13e077844b922d7bdac4c0119e0a',1,'main.c']]],
+  ['pause_5fmelody_9',['pause_melody',['../main_8c.html#a5566c36e3304c53ee0ad0285fe3a39a8',1,'main.c']]],
+  ['pin_10',['pin',['../struct_l_e_d_player.html#a053c6c519eeae78c586850765d341a49',1,'LEDPlayer']]],
+  ['player1_5fboost_5fcounter_11',['player1_boost_counter',['../struct_game.html#a17587aaab9e0772f1187fca7701684c3',1,'Game']]],
+  ['player1_5fboost_5fready_12',['player1_boost_ready',['../struct_game.html#ab7d8d949d451362182e549ea5d36f8e4',1,'Game']]],
+  ['player1_5fbutton_5fstate_13',['player1_button_state',['../struct_game.html#aa23def3c3245230b2481d769bfe8d3aa',1,'Game']]],
+  ['player1_5fpoints_14',['player1_points',['../struct_game.html#a467a3b45d69c4ce7690e87e2fc33dd98',1,'Game']]],
+  ['player1_5fprev_5fbutton_5fstate_15',['player1_prev_button_state',['../struct_game.html#a36514599a6000cf1d334380f1a0cde7a',1,'Game']]],
+  ['player2_5fboost_5fcounter_16',['player2_boost_counter',['../struct_game.html#aa7c1e2cb87000e2884eaf0ac7afaa957',1,'Game']]],
+  ['player2_5fboost_5fready_17',['player2_boost_ready',['../struct_game.html#aa9a369281994f160a6c35cb1a4f68b81',1,'Game']]],
+  ['player2_5fbutton_5fstate_18',['player2_button_state',['../struct_game.html#ac93873d207c633c98ff75074ea166850',1,'Game']]],
+  ['player2_5fpoints_19',['player2_points',['../struct_game.html#a94aea9f94651d134da6775ed798a75df',1,'Game']]],
+  ['player2_5fprev_5fbutton_5fstate_20',['player2_prev_button_state',['../struct_game.html#a2dc14b18cfcfaa738f10e8596a348e2a',1,'Game']]],
+  ['pllmultable_21',['PLLMulTable',['../group___s_t_m32_l0xx___system___private___variables.html#gadab2d89c9fe6053f421278d154dcfb9d',1,'system_stm32l0xx.c']]]
+];

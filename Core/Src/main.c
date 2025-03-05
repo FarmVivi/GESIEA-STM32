@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "gesiea.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
