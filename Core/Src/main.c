@@ -179,6 +179,9 @@ typedef struct {
 #define JOYSTICK_Y_CHANNEL_P1 LL_ADC_CHANNEL_1  /**< Canal pour l'axe Y du joystick du joueur 1 */
 #define JOYSTICK_X_CHANNEL_P2 LL_ADC_CHANNEL_10 /**< Canal pour l'axe X du joystick du joueur 2 */
 #define JOYSTICK_Y_CHANNEL_P2 LL_ADC_CHANNEL_11 /**< Canal pour l'axe Y du joystick du joueur 2 */
+
+/* Définir des limites pour la vitesse verticale de la balle */
+#define MAX_VERTICAL_SPEED 6  /* Vitesse verticale maximale (valeur absolue) */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -819,6 +822,21 @@ void Send_Game_Run_Data() {
 }
 
 /**
+ * @brief Limite la vitesse verticale de la balle dans une plage raisonnable.
+ *
+ * @param ball_dy Vitesse verticale actuelle de la balle
+ * @return La vitesse verticale limitée
+ */
+int8_t Limit_Vertical_Speed(int8_t ball_dy) {
+    if (ball_dy > MAX_VERTICAL_SPEED) {
+        return MAX_VERTICAL_SPEED;
+    } else if (ball_dy < -MAX_VERTICAL_SPEED) {
+        return -MAX_VERTICAL_SPEED;
+    }
+    return ball_dy;
+}
+
+/**
  * @brief Démarre une partie.
  *
  * @param width Largeur de la grille
@@ -877,6 +895,9 @@ void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t bal
 	} else {
 		game.ball_dy = -1 - ball_velocity; // Vers le haut
 	}
+
+	// Limiter la vitesse verticale initiale
+	game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
 
 	// Positionner les raquettes
 	game.paddle_left_x = 20;  // Position X initiale de la raquette gauche
@@ -1132,6 +1153,9 @@ void Update_Game() {
 		}
 	}
 
+    // Limiter la vitesse verticale après l'augmentation périodique
+    game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
+
     // Mise à jour de la position de la balle
     game.ball_x += game.ball_dx;
     game.ball_y += game.ball_dy;
@@ -1139,6 +1163,8 @@ void Update_Game() {
     // Gestion des collisions avec les bords supérieur et inférieur
     if (game.ball_y <= 0 || game.ball_y + game.ball_size >= game.grid_height) {
         game.ball_dy = -game.ball_dy; // Inverser la direction verticale
+        // Limiter la vitesse verticale après rebond
+        game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
         Play_Sound(hit_sound, hit_length);
     }
     
@@ -1164,6 +1190,9 @@ void Update_Game() {
 
             // Appliquer aussi au mouvement vertical
             game.ball_dy = (game.ball_dy * game.boost_factor) / 100;
+
+            // Limiter la vitesse verticale après le boost
+            game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
 
             // S'assurer que la vitesse verticale minimum est maintenue
             if (game.ball_dy > 0 && game.ball_dy < 1) game.ball_dy = 1;
@@ -1206,6 +1235,9 @@ void Update_Game() {
 
             // Appliquer aussi au mouvement vertical
             game.ball_dy = (game.ball_dy * game.boost_factor) / 100;
+
+            // Limiter la vitesse verticale après le boost
+            game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
 
             // S'assurer que la vitesse verticale minimum est maintenue
             if (game.ball_dy > 0 && game.ball_dy < 1) game.ball_dy = 1;
@@ -1272,6 +1304,9 @@ void Update_Game() {
         } else {
             game.ball_dy = -1 - game.initial_ball_velocity;
         }
+
+        // Limiter la vitesse verticale après le score
+        game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
     }
     else if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 marque un point
@@ -1316,6 +1351,9 @@ void Update_Game() {
         } else {
             game.ball_dy = -1 - game.initial_ball_velocity;
         }
+
+        // Limiter la vitesse verticale après le score
+        game.ball_dy = Limit_Vertical_Speed(game.ball_dy);
     }
     
     // Envoyer les données à l'IHM
