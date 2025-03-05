@@ -77,6 +77,11 @@ typedef struct {
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 // Fréquences des notes (en Hz)
+#define NOTE_G3  196.00  // Sol3
+#define NOTE_GS3 207.65  // Sol#3/La♭3
+#define NOTE_A3  220.00  // La3
+#define NOTE_AS3 233.08  // La#3/Si♭3
+#define NOTE_B3  246.94  // Si3
 #define NOTE_C4  261.63  // Do4
 #define NOTE_CS4 277.18  // Do#4/Ré♭4
 #define NOTE_D4  293.66  // Ré4
@@ -94,6 +99,9 @@ typedef struct {
 #define NOTE_D5  587.33  // Ré5
 #define NOTE_DS5 622.25  // Ré#5/Mi♭5
 #define NOTE_E5  659.25  // Mi5
+#define NOTE_F5  698.46  // Fa5
+#define NOTE_FS5 739.99  // Fa#5/Sol♭5
+#define NOTE_G5  783.99  // Sol5
 
 // Status du jeu
 #define GAME_STATUS_NONE 0
@@ -125,66 +133,98 @@ typedef struct {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// Mélodie de démarrage
+// Mélodie de démarrage - plus joyeuse et reconnaissable
 Note init_melody[] = {
-    {NOTE_G4}, {NOTE_A4}, {NOTE_B4}, {NOTE_C5}
+    {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_E5}, {NOTE_E5}, {NOTE_G5}, {NOTE_G5},
+    {NOTE_E5}, {NOTE_E5}, {NOTE_C5}, {NOTE_C5}
 };
 size_t init_length = sizeof(init_melody) / sizeof(Note);
 
-// Mélodie de connexion
+// Mélodie de connexion - fanfare plus distincte
 Note connection_melody[] = {
-    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4}
+    {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4},
+    {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_G4}, {NOTE_G4}, {NOTE_E4}, {NOTE_E4},
+    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}
 };
 size_t connection_length = sizeof(connection_melody) / sizeof(Note);
 
-// Mélodie de déconnexion
+// Mélodie de déconnexion - descente plus dramatique
 Note disconnection_melody[] = {
-    {NOTE_C5}, {NOTE_G4}, {NOTE_E4}, {NOTE_C4}
+    {NOTE_C5}, {NOTE_C5}, {NOTE_A4}, {NOTE_A4},
+    {NOTE_F4}, {NOTE_F4}, {NOTE_D4}, {NOTE_D4},
+    {NOTE_C4}, {NOTE_C4}, {0}, {0}  // Silence à la fin pour effet dramatique
 };
 size_t disconnection_length = sizeof(disconnection_melody) / sizeof(Note);
 
-// Mélodie de début de partie
+// Mélodie de début de partie - plus excitante et rythmée
 Note game_start_melody[] = {
-    {NOTE_E4}, {NOTE_F4}, {NOTE_G4},
-    {NOTE_A4}, {NOTE_B4}, {NOTE_C5}
+    {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4},
+    {NOTE_A4}, {NOTE_A4}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_B4}, {NOTE_A4}, {NOTE_G4}, {NOTE_E4},
+    {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5}
 };
 size_t game_start_length = sizeof(game_start_melody) / sizeof(Note);
 
-// Mélodie de mise en pause
+// Mélodie de mise en pause - descente douce
 Note pause_melody[] = {
-    {NOTE_C5}, {NOTE_A4}, {NOTE_F4}, {NOTE_D4}
+    {NOTE_E5}, {NOTE_E5}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_A4}, {NOTE_A4}, {NOTE_E4}, {NOTE_E4},
+    {NOTE_C4}, {NOTE_C4}, {0}, {0}  // Silence pour indiquer la pause
 };
 size_t pause_length = sizeof(pause_melody) / sizeof(Note);
 
-// Mélodie de reprise
+// Mélodie de reprise - montée énergique
 Note resume_melody[] = {
-    {NOTE_D4}, {NOTE_F4}, {NOTE_A4}, {NOTE_C5}
+    {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4},
+    {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_E5}, {NOTE_E5}, {NOTE_G5}, {NOTE_G5}
 };
 size_t resume_length = sizeof(resume_melody) / sizeof(Note);
 
-// Mélodie de touche
+// Mélodie de touche - plus dynamique mais toujours courte
 Note pong_hit_sound[] = {
-    {NOTE_E4}, {NOTE_G4}
+    {NOTE_A4}, {NOTE_E5}, {NOTE_A4}, {0}
 };
 size_t pong_hit_length = sizeof(pong_hit_sound) / sizeof(Note);
 
-// Mélodie de victoire
+// Mélodie de victoire - fanfare triomphante
 Note victory_melody[] = {
-    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}
+    {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_G4},
+    {NOTE_C5}, {NOTE_C5}, {NOTE_E5}, {NOTE_E5},
+    {NOTE_G5}, {NOTE_G5}, {NOTE_G5}, {NOTE_G5},
+    {NOTE_E5}, {NOTE_C5}, {NOTE_G4}, {NOTE_C5},
+    {NOTE_C5}, {NOTE_C5}, {0}, {0}
 };
 size_t victory_length = sizeof(victory_melody) / sizeof(Note);
 
-// Mélodie de défaite
+// Mélodie de défaite - triste et descendante
 Note defeat_melody[] = {
-    {NOTE_C5}, {NOTE_G4}, {NOTE_E4}, {NOTE_C4}
+    {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_G4},
+    {NOTE_E4}, {NOTE_E4}, {NOTE_C4}, {NOTE_C4},
+    {NOTE_B3}, {NOTE_B3}, {NOTE_G3}, {NOTE_G3},
+    {NOTE_G3}, {0}, {0}, {0}
 };
 size_t defeat_length = sizeof(defeat_melody) / sizeof(Note);
 
-// Mélodie de fond pour le jeu (boucle)
+// Mélodie de fond pour le jeu (boucle) - plus rythmée et variée
 Note background_melody[] = {
-    {NOTE_C4}, {NOTE_E4}, {NOTE_G4}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4},
-    {NOTE_D4}, {NOTE_F4}, {NOTE_A4}, {NOTE_D5}, {NOTE_A4}, {NOTE_F4},
-    {NOTE_E4}, {NOTE_G4}, {NOTE_B4}, {NOTE_E5}, {NOTE_B4}, {NOTE_G4}
+    // Partie 1: thème principal
+    {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5},
+    {NOTE_G4}, {NOTE_G4}, {NOTE_E4}, {NOTE_E4}, {NOTE_C4}, {NOTE_C4}, {NOTE_E4}, {NOTE_G4},
+
+    // Partie 2: variation
+    {NOTE_D4}, {NOTE_D4}, {NOTE_F4}, {NOTE_F4}, {NOTE_A4}, {NOTE_A4}, {NOTE_D5}, {NOTE_D5},
+    {NOTE_A4}, {NOTE_A4}, {NOTE_F4}, {NOTE_F4}, {NOTE_D4}, {NOTE_D4}, {NOTE_F4}, {NOTE_A4},
+
+    // Partie 3: montée
+    {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4}, {NOTE_B4}, {NOTE_B4}, {NOTE_E5}, {NOTE_E5},
+    {NOTE_B4}, {NOTE_B4}, {NOTE_G4}, {NOTE_G4}, {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_B4},
+
+    // Partie 4: finale
+    {NOTE_C5}, {NOTE_C5}, {NOTE_A4}, {NOTE_A4}, {NOTE_F4}, {NOTE_F4}, {NOTE_D4}, {NOTE_D4},
+    {NOTE_E4}, {NOTE_E4}, {NOTE_G4}, {NOTE_G4}, {NOTE_C5}, {NOTE_C5}, {NOTE_G4}, {NOTE_E4}
 };
 size_t background_length = sizeof(background_melody) / sizeof(Note);
 
