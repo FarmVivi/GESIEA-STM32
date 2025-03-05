@@ -87,18 +87,20 @@ typedef struct {
     uint16_t left_zone_width;
     uint16_t right_zone_width;
     // Boost
-    uint8_t player1_button_state;     // État actuel du bouton du joueur 1
+    uint8_t player1_button_state;      // État actuel du bouton du joueur 1
     uint8_t player1_prev_button_state; // État précédent du bouton du joueur 1
     uint8_t player1_boost_ready;       // Indique si le boost du joueur 1 est prêt
     uint8_t player1_boost_counter;     // Compteur pour le joueur 1
 
-    uint8_t player2_button_state;     // État actuel du bouton du joueur 2
+    uint8_t player2_button_state;      // État actuel du bouton du joueur 2
     uint8_t player2_prev_button_state; // État précédent du bouton du joueur 2
     uint8_t player2_boost_ready;       // Indique si le boost du joueur 2 est prêt
     uint8_t player2_boost_counter;     // Compteur pour le joueur 2
 
-    uint8_t boost_window;             // Fenêtre de temps pour le boost (en ticks)
-    uint8_t boost_factor;             // Facteur de boost (en pourcentage)
+    uint8_t boost_window;              // Fenêtre de temps pour le boost (en ticks)
+    uint8_t boost_factor;              // Facteur de boost (en pourcentage)
+
+    uint16_t tick;                      // Compteur de ticks pour le jeu
 } Game;
 /* USER CODE END PTD */
 
@@ -757,6 +759,9 @@ void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t bal
 	// Par défaut, définir le statut à "none"
 	game.status = GAME_STATUS_NONE;
 
+	// Tick
+	game.tick = 0;
+
 	// Envoyer les données du jeu à l'IHM
 	Send_Game_All_Data();
 
@@ -824,6 +829,14 @@ void Stop_Game() {
 void Update_Game() {
 	// Si la partie est en cours
 	if (game.status != GAME_STATUS_RUNNING) {
+		return;
+	}
+
+	// Augmenter le tick
+	game.tick++;
+
+	// Si le tick est inférieur à 60, ne pas mettre à jour le jeu (délai de démarrage)
+	if (game.tick < 60) {
 		return;
 	}
 
@@ -951,6 +964,20 @@ void Update_Game() {
         }
     }
     
+    // Augmenter la vitesse de la balle toutes les 15 secondes (environ 450 ticks à 30Hz)
+    if (game.tick % 450 == 0) {
+		if (game.ball_dx > 0) {
+			game.ball_dx++;
+		} else {
+			game.ball_dx--;
+		}
+		if (game.ball_dy > 0) {
+			game.ball_dy++;
+		} else {
+			game.ball_dy--;
+		}
+	}
+
     // Mise à jour de la position de la balle
     game.ball_x += game.ball_dx;
     game.ball_y += game.ball_dy;
@@ -1077,17 +1104,9 @@ void Update_Game() {
         // Repositionner la balle au centre et inverser sa direction
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
-        game.ball_dx = 2 + (game.player1_points + game.player2_points) / 3; // Augmenter légèrement la vitesse
-        
-        // Choisir aléatoirement la vitesse verticale
-        uint32_t r = get_random_number_range(0, 2);
-        if (r == 0) {
-            game.ball_dy = 1 + (game.player1_points + game.player2_points) / 5;
-        } else if (r == 1) {
-            game.ball_dy = 2 + (game.player1_points + game.player2_points) / 5;
-        } else {
-            game.ball_dy = -1 - (game.player1_points + game.player2_points) / 5;
-        }
+
+        // Inverser la direction horizontale
+        game.ball_dx = -game.ball_dx;
     }
     
     if (game.ball_x + game.ball_size >= game.grid_width) {
@@ -1119,17 +1138,9 @@ void Update_Game() {
         // Repositionner la balle au centre et inverser sa direction
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
-        game.ball_dx = -2 - (game.player1_points + game.player2_points) / 3; // Augmenter légèrement la vitesse
-        
-        // Choisir aléatoirement la vitesse verticale
-        uint32_t r = get_random_number_range(0, 2);
-        if (r == 0) {
-            game.ball_dy = 1 + (game.player1_points + game.player2_points) / 5;
-        } else if (r == 1) {
-            game.ball_dy = 2 + (game.player1_points + game.player2_points) / 5;
-        } else {
-            game.ball_dy = -1 - (game.player1_points + game.player2_points) / 5;
-        }
+
+        // Inverser la direction horizontale
+        game.ball_dx = -game.ball_dx;
     }
     
     // Envoyer les données à l'IHM
