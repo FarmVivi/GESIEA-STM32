@@ -71,6 +71,7 @@ typedef struct {
     uint16_t ball_y;
     int8_t ball_dx;
     int8_t ball_dy;
+    uint8_t initial_ball_velocity;
     uint16_t paddle_left_x;
     uint16_t paddle_left_y;
     uint16_t paddle_right_x;
@@ -718,6 +719,9 @@ void Start_Game(uint16_t width, uint16_t height, uint8_t max_points, uint8_t bal
 	game.ball_x = game.grid_width / 2;
 	game.ball_y = game.grid_height / 2;
 
+    // Stocker la vitesse initiale de la balle
+    game.initial_ball_velocity = ball_velocity;
+
 	// Déterminer aléatoirement la direction horizontale de la balle
 	if (get_random_number_range(0, 1) == 0) {
 		game.ball_dx = 2 + ball_velocity;  // Vers la droite
@@ -1080,7 +1084,7 @@ void Update_Game() {
         game.player2_points++;
         Play_Sound_P2(hit_sound, hit_length);
         
-        Player2_Victory_LED(4, 0, 0, 0); // 4 ticks (1s), pas de clignotement, non infini
+        Player2_Victory_LED(4, 0, 0, 0);
 
         // Vérifier si le joueur 2 a gagné la partie
         if (game.player2_points >= game.max_points) {
@@ -1105,17 +1109,26 @@ void Update_Game() {
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
 
-        // S'assurer que la balle se déplace vers la droite (vers le joueur 2 qui a marqué)
-        if (game.ball_dx < 0) {
-			game.ball_dx = -game.ball_dx; // Inverser la direction si elle était négative
-		}
+        // MODIFICATION : Réinitialiser la vitesse de la balle à sa valeur initiale
+        // et la diriger vers le joueur 2 qui a marqué
+        game.ball_dx = 2 + game.initial_ball_velocity;  // Vers la droite (joueur 2)
+
+        // Réinitialiser aussi la composante verticale avec une direction aléatoire
+        uint32_t r = get_random_number_range(0, 2);
+        if (r == 0) {
+            game.ball_dy = 1 + game.initial_ball_velocity;
+        } else if (r == 1) {
+            game.ball_dy = 2 + game.initial_ball_velocity;
+        } else {
+            game.ball_dy = -1 - game.initial_ball_velocity;
+        }
     }
     else if (game.ball_x + game.ball_size >= game.grid_width) {
         // Joueur 1 marque un point
         game.player1_points++;
         Play_Sound_P1(hit_sound, hit_length);
         
-        Player1_Victory_LED(4, 0, 0, 0); // 4 ticks (1s), pas de clignotement, non infini
+        Player1_Victory_LED(4, 0, 0, 0);
 
         // Vérifier si le joueur 1 a gagné la partie
         if (game.player1_points >= game.max_points) {
@@ -1140,9 +1153,18 @@ void Update_Game() {
         game.ball_x = game.grid_width / 2;
         game.ball_y = game.grid_height / 2;
 
-        // S'assurer que la balle se déplace vers la gauche (vers le joueur 1 qui a marqué)
-        if (game.ball_dx > 0) {
-            game.ball_dx = -game.ball_dx; // Inverser la direction si elle était positive
+        // MODIFICATION : Réinitialiser la vitesse de la balle à sa valeur initiale
+        // et la diriger vers le joueur 1 qui a marqué
+        game.ball_dx = -2 - game.initial_ball_velocity;  // Vers la gauche (joueur 1)
+
+        // Réinitialiser aussi la composante verticale avec une direction aléatoire
+        uint32_t r = get_random_number_range(0, 2);
+        if (r == 0) {
+            game.ball_dy = 1 + game.initial_ball_velocity;
+        } else if (r == 1) {
+            game.ball_dy = 2 + game.initial_ball_velocity;
+        } else {
+            game.ball_dy = -1 - game.initial_ball_velocity;
         }
     }
     
