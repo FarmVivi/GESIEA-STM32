@@ -344,15 +344,48 @@ int _write(int file, char *ptr, int len) {
 }
 
 /**
- * @brief Génère un nombre pseudo-aléatoire.
+ * @brief Génère un nombre pseudo-aléatoire avec entropie améliorée.
+ *
+ * Utilise les sources d'entropie matérielles (ADC, timers) et un
+ * algorithme amélioré pour une meilleure distribution des valeurs aléatoires.
  *
  * @return Nombre aléatoire généré
  */
 uint32_t get_random_number()
 {
-	static uint32_t seed = 0;
-	seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
-	return seed;
+    static uint32_t seed = 0;
+    static uint8_t initialized = 0;
+
+    // Initialiser la graine avec diverses sources d'entropie au premier appel
+    if (!initialized) {
+        // Utiliser le compteur système comme base
+        seed ^= LL_SYSTICK_GetCounter();
+
+        // Ajouter de l'entropie avec les valeurs des joysticks
+        seed ^= Read_ADC_Value(ADC1, JOYSTICK_X_CHANNEL_P1);
+        seed ^= Read_ADC_Value(ADC1, JOYSTICK_Y_CHANNEL_P1) << 8;
+        seed ^= Read_ADC_Value(ADC1, JOYSTICK_X_CHANNEL_P2) << 16;
+        seed ^= Read_ADC_Value(ADC1, JOYSTICK_Y_CHANNEL_P2) << 24;
+
+        // Ajouter les valeurs des timers
+        seed ^= LL_TIM_GetCounter(TIM2);
+        seed ^= LL_TIM_GetCounter(TIM22) << 8;
+
+        // Éviter la valeur zéro
+        if (seed == 0) seed = 0x12345678;
+
+        initialized = 1;
+    }
+
+    // Algorithme amélioré (combinaison d'un LCG avec des opérations XOR)
+    seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
+
+    // Appliquer une transformation supplémentaire pour améliorer la distribution
+    seed ^= seed << 13;
+    seed ^= seed >> 17;
+    seed ^= seed << 5;
+
+    return seed;
 }
 
 /**
